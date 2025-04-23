@@ -59,32 +59,33 @@ export async function getAutomationConfig(
   pageId: string,
   type: string
 ): Promise<Record<string, any>> {
-  try {
-    const { data, error } = await supabase
-      .from('auto_engines')
-      .select('config')
-      .eq('page_id', pageId)
-      .eq('type', type)
-      .single();
+  //  try {
+  const { data, error } = await supabase
+    .from('auto_engines')
+    .select('config')
+    .eq('page_id', pageId)
+    .eq('type', type)
+    .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // Record not found → use default
-        console.warn(`[getAutomationConfig] No config found, using default for type=${type}`);
-        return getDefaultEngineConfig(type);
-      }
-      // Other errors (network, timeout, etc) → throw to UI
-      console.error('[getAutomationConfig] DB error:', error);
-      throw error;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Record not found → use default
+      console.warn(`[getAutomationConfig] No config found, using default for type=${type}`);
+      return getDefaultEngineConfig(type);
     }
-
-    // If config exists but is null → use default
-    return data?.config ?? getDefaultEngineConfig(type);
-  } catch (error) {
-    // Re-throw any errors to let UI handle them
+    // Other errors (network, timeout, etc) → throw to UI
+    console.error('[getAutomationConfig] DB error:', error);
     throw error;
   }
+
+  // If config exists but is null → use default
+  return data?.config ?? getDefaultEngineConfig(type);
 }
+//   catch (error) {
+//     // Re-throw any errors to let UI handle them
+//     throw error;
+//   }
+// }
 
 // Helper function to update automation config
 export async function updateAutomationConfig(

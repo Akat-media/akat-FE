@@ -20,7 +20,7 @@ interface EngineState {
   setEngineStatus: (pageId: string, type: string, status: AutoEngine['status']) => Promise<void>;
 }
 
-export const useEngineStore = create<EngineState>((set, get) => ({
+export const useEngineStore = create<EngineState>((set) => ({
   engines: {},
   loading: false,
   loadingPages: {},

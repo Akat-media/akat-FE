@@ -20,13 +20,14 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   tseslint.configs.recommended,
+  pluginReact.configs.flat.recommended,
 
-  // 🔥 Thêm phần này để tắt "no-explicit-any"
   {
+    files: ['**/*.{ts,tsx,js,jsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'react/react-in-jsx-scope': 'off',
     },
   },
-
-  pluginReact.configs.flat.recommended,
 ]);

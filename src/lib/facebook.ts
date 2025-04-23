@@ -315,6 +315,8 @@ export async function connectFacebookPage(page: FacebookPage) {
           connectionId: connection.id,
         }),
       });
+      const tokenData = await getUserToken.json();
+      console.log(tokenData);
     }
 
     return { success: true };
@@ -335,7 +337,7 @@ export async function disconnectFacebookPage(pageId: string, connectionId: strin
     }
 
     // Update connection status to disconnected
-    const { error } = await supabase
+    await supabase
       .from('facebook_connections')
       .update({
         status: 'disconnected',

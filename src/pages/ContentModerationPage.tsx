@@ -6,12 +6,8 @@ import {
   Loader2,
   Settings,
   RefreshCw,
-  Send,
   Eye,
   EyeOff,
-  ToggleLeft,
-  ToggleRight,
-  Search,
   Shield,
   MessageSquare,
   Mail,
@@ -20,15 +16,11 @@ import {
 } from 'lucide-react';
 import { useMonitoringStore } from '../store/monitoringStore';
 import {
-  getModerationPrompt,
-  updateModerationPrompt,
   getModeratedPosts,
   getUserFacebookPages,
   getPageConfig,
   updatePageConfig,
-  type AutoEngineConfig,
   type FacebookPost,
-  type ModerationPrompt,
 } from '../lib/contentModeration';
 
 interface MonitoredPage {
@@ -42,7 +34,7 @@ interface MonitoredPage {
 function ContentModerationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { monitoredPages, setPageMonitoring, initializeMonitoring } = useMonitoringStore();
+  const { setPageMonitoring, initializeMonitoring } = useMonitoringStore();
   const [selectedPage, setSelectedPage] = useState<string | null>(null);
   const [pages, setPages] = useState<MonitoredPage[]>([]);
   const [posts, setPosts] = useState<FacebookPost[]>([]);
@@ -57,7 +49,7 @@ function ContentModerationPage() {
   const [autoCorrectEnabled, setAutoCorrectEnabled] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [showToggleConfirm, setShowToggleConfirm] = useState<string | null>(null);
-  const [showEmailSettings, setShowEmailSettings] = useState(false);
+  //  const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [emails, setEmails] = useState<string[]>(['admin@example.com']);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
@@ -220,6 +212,7 @@ function ContentModerationPage() {
     }
   };
 
+   
   const saveConfig = async () => {
     if (!selectedPage) return;
     try {
@@ -238,6 +231,7 @@ function ContentModerationPage() {
       setSavingConfig(false);
     }
   };
+   
 
   const addEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

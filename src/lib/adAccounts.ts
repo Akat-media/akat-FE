@@ -1,4 +1,4 @@
-import { useAuthStore } from '../store/authStore';
+// import { useAuthStore } from '../store/authStore';
 import { supabase } from './supabase';
 
 export type AdAccountStatus =

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
+import { MessageSquare, AlertCircle } from 'lucide-react';
 import { lark } from '../lib/lark';
 
 interface LarkConnectProps {

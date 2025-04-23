@@ -10,7 +10,6 @@ import {
 import {
   Home,
   Settings,
-  MessageSquare,
   Bot,
   BarChart3,
   Shield,
@@ -18,7 +17,6 @@ import {
   Database,
   Menu,
   X,
-  Layout,
   FileCode,
   Sliders,
   ChevronDown,

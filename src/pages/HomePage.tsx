@@ -1,25 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BarChart3,
-  MessageSquare,
-  Shield,
-  Bot,
   MessageCircleHeart,
   MonitorDotIcon,
-  TrendingUp,
-  Users,
-  Bell,
   DollarSign,
   Target,
   ArrowUpRight,
   ArrowDownRight,
-  AlertTriangle,
   Eye,
-  Share2,
   Facebook,
   Zap,
-  Triangle,
-  TriangleIcon,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 

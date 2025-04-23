@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  BarChart3,
   Shield,
   MessageSquare,
   Eye,

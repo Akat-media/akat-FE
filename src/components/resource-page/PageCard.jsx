@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 function PageCard({ page }) {
   return (
@@ -166,5 +167,18 @@ function PageCard({ page }) {
     </div>
   );
 }
+
+PageCard.propTypes = {
+  page: PropTypes.shape({
+    image_url: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    category: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    follows: PropTypes.number.isRequired,
+    interactions: PropTypes.number.isRequired,
+    approach: PropTypes.number.isRequired,
+    posts: PropTypes.number.isRequired,
+  }).isRequired,
+};
 
 export default PageCard;

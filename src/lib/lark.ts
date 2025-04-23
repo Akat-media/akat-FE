@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+//import { supabase } from './supabase';
 
 export interface LarkConfig {
   appId: string;
@@ -45,7 +45,8 @@ export class LarkIntegration {
       const data = await response.json();
       return data.tenant_access_token;
     } catch (error) {
-      throw new Error('Failed to authenticate with Lark');
+      console.error('Gửi tin nhắ tới Lark không thành công: ', error);
+      throw new Error();
     }
   }
 
@@ -69,7 +70,8 @@ export class LarkIntegration {
         }),
       });
     } catch (error) {
-      throw new Error('Failed to send message to Lark');
+      console.error('Gửi tin nhắ tới Lark không thành công: ', error);
+      throw new Error();
     }
   }
 
@@ -99,7 +101,8 @@ export class LarkIntegration {
         },
       }));
     } catch (error) {
-      throw new Error('Failed to sync messages from Lark');
+      console.error('Gửi tin nhắ tới Lark không thành công: ', error);
+      throw new Error();
     }
   }
 }

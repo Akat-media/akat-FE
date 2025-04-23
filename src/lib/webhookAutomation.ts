@@ -177,10 +177,9 @@ export async function testWebhookConnection(config: WebhookConfig): Promise<bool
  * Get webhook subscription status
  * This would require Facebook Graph API access with appropriate permissions
  */
-export async function getWebhookSubscriptionStatus(
-  appId: string,
-  accessToken: string
-): Promise<FacebookWebhookSubscription[]> {
+export async function getWebhookSubscriptionStatus(): Promise<FacebookWebhookSubscription[]> {
+// appId: string,
+// accessToken: string
   try {
     // In a real implementation, you would call the Facebook Graph API
     // to get the current webhook subscriptions

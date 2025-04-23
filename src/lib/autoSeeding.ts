@@ -64,7 +64,7 @@ function calculateEngagementScore(post: any): number {
   return likes * 1 + comments * 2 + shares * 3;
 }
 
-function generateRecommendedActions(post: any): { likes: number; comments: string[] } {
+function generateRecommendedActions(): { likes: number; comments: string[] } {
   const baseComments = [
     'Great post! 👍',
     'This is amazing! 🔥',
@@ -73,7 +73,7 @@ function generateRecommendedActions(post: any): { likes: number; comments: strin
     'Thanks for sharing! 🙏',
   ];
 
-  const engagementScore = calculateEngagementScore(post);
+  // const engagementScore = calculateEngagementScore(post);
   const recommendedLikes = Math.floor(Math.random() * 10) + 5; // Random number between 5-15
 
   // Select relevant comments based on post content and engagement
@@ -88,8 +88,8 @@ function generateRecommendedActions(post: any): { likes: number; comments: strin
 export async function executeSeeding(
   pageId: string,
   postId: string,
-  actions: { likes: number; comments: string[] },
-  config: SeedingConfig
+  actions: { likes: number; comments: string[] }
+  // config: SeedingConfig
 ): Promise<void> {
   try {
     // Log the seeding action
