@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, Lock, Mail, Phone } from 'lucide-react';
+import { Lock, Mail, Phone } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 function RegisterPage() {

@@ -18,8 +18,6 @@ import {
   MapPin,
   Tag,
   Users,
-  Bot,
-  Smile,
 } from 'lucide-react';
 import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
@@ -73,7 +71,7 @@ function PostSchedule() {
   ];
 
   const daysInWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-  const today = new Date();
+  // const today = new Date();
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();

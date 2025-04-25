@@ -33,7 +33,7 @@ interface AutomationState {
   ) => Promise<void>;
 }
 
-export const useAutomationStore = create<AutomationState>((set, get) => ({
+export const useAutomationStore = create<AutomationState>((set) => ({
   types: [],
   configs: {},
   loading: false,

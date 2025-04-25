@@ -2,21 +2,17 @@ import React, { useState, useEffect } from 'react';
 import {
   Users,
   MessageSquare,
-  Share2,
   Eye,
   CheckCircle,
   FileText,
   AlertCircle,
   Loader2,
   Facebook,
-  BarChart3,
   Search,
   Download,
-  ChevronDown,
   ArrowUpRight,
   ArrowDownRight,
   Plus,
-  X,
   Calendar,
   Heart,
   MessageCircleHeart,
@@ -216,8 +212,8 @@ function ResourcePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [showAddPage, setShowAddPage] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  const [setShowAddPage] = useState(false);
+  const [setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
 
   // Stats for the dashboard based on date range
@@ -451,8 +447,8 @@ function ResourcePage() {
       </div>
 
       {/* Modals */}
-      {showAddPage && <AddPageModal onClose={() => setShowAddPage(false)} />}
-      {showExport && <ExportModal onClose={() => setShowExport(false)} />}
+      {/* {showAddPage && <AddPageModal onClose={() => setShowAddPage(false)} />}
+      {showExport && <ExportModal onClose={() => setShowExport(false)} />} */}
     </div>
   );
 }

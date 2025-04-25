@@ -10,7 +10,6 @@ import {
 import {
   Home,
   Settings,
-  MessageSquare,
   Bot,
   BarChart3,
   Shield,
@@ -18,7 +17,6 @@ import {
   Database,
   Menu,
   X,
-  Layout,
   FileCode,
   Sliders,
   ChevronDown,
@@ -111,17 +109,13 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             <Link
               to="/"
               className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative ${
-                isActive('/')
-                  ? 'bg-blue-50 text-blue-600 font-semibold dark:bg-blue-900 dark:text-blue-300'
-                  : 'hover:bg-gray-50 text-gray-600 dark:hover:bg-gray-800 dark:text-gray-300'
+                isActive('/') ? 'bg-blue-50 text-blue-600 font-semibold' : 'hover:bg-gray-50'
               }`}
               onClick={onClose}
             >
               <div
                 className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
-                  isActive('/')
-                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-800 dark:text-blue-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                  isActive('/') ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
                 }`}
               >
                 <Home className="w-5 h-5" />

@@ -8,8 +8,8 @@ const router = express.Router();
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || import.meta.env?.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD || import.meta.env?.EMAIL_PASSWORD,
+    user: import.meta.env.EMAIL_USER,
+    pass: import.meta.env.EMAIL_PASSWORD,
   },
 });
 
@@ -25,7 +25,7 @@ router.post('/test', async (req, res) => {
     if (type === 'email') {
       // Send test email
       const mailOptions = {
-        from: process.env.EMAIL_USER || import.meta.env?.EMAIL_USER,
+        from: import.meta.env.EMAIL_USER,
         to: recipient,
         subject: 'Test Notification from AKA Platform',
         html: `

@@ -9,7 +9,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { disconnectFacebookPage, refreshPageConnection } from '../lib/facebook';
+import { disconnectFacebookPage } from '../lib/facebook';
 import { useMonitoringStore } from '../store/monitoringStore';
 
 interface ConnectedPage {
@@ -37,7 +37,7 @@ function DeleteConfirmation({ page, onConfirm, onCancel, isLoading }: DeleteConf
       <div className="p-4 text-center">
         <h4 className="font-medium text-gray-900 mb-2">Xác nhận ngắt kết nối</h4>
         <p className="text-sm text-gray-600 mb-4">
-          Bạn có chắc chắn muốn ngắt kết nối với page "{page.page_name}"?
+          Bạn có chắc chắn muốn ngắt kết nối với page &quot;{page.page_name}&quot;?
         </p>
         <div className="flex items-center justify-center gap-3">
           <button
@@ -74,7 +74,7 @@ function ConnectedPages() {
   const [pages, setPages] = useState<ConnectedPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showConfig, setShowConfig] = useState<string | null>(null);
+  const [setShowConfig] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [pageToDelete, setPageToDelete] = useState<ConnectedPage | null>(null);
   const { syncing } = useMonitoringStore();

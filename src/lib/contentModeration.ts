@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import axios from 'axios';
 import { getAutomationConfig, updateAutomationConfig } from './automation';
 
 export interface ModerationPrompt {

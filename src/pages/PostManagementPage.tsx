@@ -19,12 +19,12 @@ import NewPostModal from '../components/NewPostModal';
 import PageSelector from '../components/PageSelector';
 
 function PostManagementPage() {
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [dateRange, setDateRange] = useState<'7' | '30' | '60'>('30');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'violated'>('all');
+  const [filterStatus] = useState<'all' | 'approved' | 'violated'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule'>('content');
 

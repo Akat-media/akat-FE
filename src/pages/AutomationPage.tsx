@@ -1,39 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Bell,
-  Calendar,
-  Mail,
   MessageSquare,
-  FileText,
   Zap,
   Plus,
-  X,
   ChevronRight,
   ChevronDown,
   Search,
   Bot,
   Shield,
   BarChart3,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Settings,
-  RefreshCw,
-  Send,
-  Eye,
-  EyeOff,
   ChevronLeft,
 } from 'lucide-react';
-import {
-  getModerationPrompt,
-  updateModerationPrompt,
-  getModeratedPosts,
-  sendTestNotification,
-  getUserFacebookPages,
-  type FacebookPost,
-  type ModerationPrompt,
-} from '../lib/contentModeration';
+// import {
+//   getModerationPrompt,
+//   updateModerationPrompt,
+//   getModeratedPosts,
+//   sendTestNotification,
+//   getUserFacebookPages,
+//   type FacebookPost,
+//   type ModerationPrompt,
+// } from '../lib/contentModeration';
 import ContentModerationPage from './ContentModerationPage';
 
 function AutomationPage() {
@@ -41,7 +27,7 @@ function AutomationPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-
+  //Test
   const categories = [
     { id: 'all', name: 'Tất cả' },
     { id: 'message', name: 'Tin nhắn & Bình luận', icon: <MessageSquare /> },

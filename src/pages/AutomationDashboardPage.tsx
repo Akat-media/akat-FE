@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, BarChart3, Users, Zap, ArrowUpRight, ArrowDownRight, StickyNote } from 'lucide-react';
+import { Bot, BarChart3, Zap, ArrowUpRight, ArrowDownRight, StickyNote } from 'lucide-react';
 
 function AutomationDashboardPage() {
   const stats = [

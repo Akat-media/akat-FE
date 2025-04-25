@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-interface WebhookSetupProps {
-  pageId: string;
-}
+// interface WebhookSetupProps {
+//   pageId: string;
+// }
 
-function WebhookSetup({ pageId }: WebhookSetupProps) {
+function WebhookSetup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);

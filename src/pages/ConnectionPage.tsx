@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Link2,
-  CheckCircle,
   AlertCircle,
   Facebook,
   Shield,
@@ -171,7 +170,7 @@ function ConnectionPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [migrationRunning, setMigrationRunning] = useState(false);
   const [showPanCakeConfig, setShowPanCakeConfig] = useState(false);
-  const [showGuide, setShowGuide] = useState<string | null>(null);
+  //  const [showGuide, setShowGuide] = useState<string | null>(null);
   const [connectedPagesCount, setConnectedPagesCount] = useState(0);
   const [showConnectedPages, setShowConnectedPages] = useState(false);
   const [currentGuide, setCurrentGuide] = useState<string>('default');
@@ -493,7 +492,7 @@ function ConnectionPage() {
 
   // Hiển thị nội dung của các section khác
   const renderOtherSection = () => {
-    return <section.component onConnect={handleConnectSuccess} />;
+    // return <section.component onConnect={handleConnectSuccess} />;
   };
 
   return (

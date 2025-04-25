@@ -23,7 +23,7 @@ export async function handleWebhook(payload: WebhookPayload) {
   }
 }
 
-function isValidSignature(payload: WebhookPayload): boolean {
+function isValidSignature(): boolean {
   // Implement signature validation logic here
   // This is a placeholder that always returns true
   return true;
