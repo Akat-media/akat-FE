@@ -137,16 +137,16 @@ function ContentOverviewPage() {
                   {stat.type === 'Tiếp cận' ? (
                     <div className="text-right">
                       <div className="text-sm font-medium text-gray-900">
-                        {stat.total.toLocaleString()} lượt
+                        {stat.total?.toLocaleString()} lượt
                       </div>
                       <div className="text-xs text-gray-500">
-                        Tự nhiên: {stat.organic.toLocaleString()} • Ads:{' '}
-                        {stat.paid.toLocaleString()}
+                        Tự nhiên: {stat.organic?.toLocaleString()} • Ads:{' '}
+                        {stat.paid?.toLocaleString()}
                       </div>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-600">
-                      {stat.count.toLocaleString()} lượt
+                      {stat.count?.toLocaleString()} lượt
                     </span>
                   )}
                 </div>
@@ -155,22 +155,22 @@ function ContentOverviewPage() {
                     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                       <div
                         className="h-2 bg-gradient-to-r from-purple-500 to-purple-600"
-                        style={{ width: `${(stat.organic / stat.total) * 100}%` }}
+                        style={{ width: `${((stat.organic ?? 0) / (stat.total ?? 1)) * 100}%` }}
                       />
                       <div
                         className="h-2 bg-gradient-to-r from-blue-500 to-blue-600 -mt-2"
                         style={{
-                          width: `${(stat.paid / stat.total) * 100}%`,
-                          marginLeft: `${(stat.organic / stat.total) * 100}%`,
+                          width: `${((stat.paid ?? 0) / (stat.total ?? 1)) * 100}%`,
+                          marginLeft: `${((stat.organic ?? 0) / (stat.total ?? 1)) * 100}%`,
                         }}
                       />
                     </div>
                     <div className="mt-2 flex justify-between text-xs">
                       <span className="text-purple-600">
-                        Tự nhiên: {((stat.organic / stat.total) * 100).toFixed(1)}%
+                        Tự nhiên: {(((stat.organic ?? 0) / (stat.total ?? 1)) * 100).toFixed(1)}%
                       </span>
                       <span className="text-blue-600">
-                        Ads: {((stat.paid / stat.total) * 100).toFixed(1)}%
+                        Ads: {(((stat.paid ?? 0) / (stat.total ?? 1)) * 100).toFixed(1)}%
                       </span>
                     </div>
                   </>

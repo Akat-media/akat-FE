@@ -68,7 +68,7 @@ function AutoSeedingConfig({ onClose }: AutoSeedingConfigProps) {
       setLoading(true);
       setError(null);
 
-      await executeSeeding('dummy-page-id', analysis.id, analysis.recommendedActions, config);
+      await executeSeeding('dummy-page-id', analysis.id, analysis.recommendedActions /*config*/);
 
       onClose();
     } catch (err) {

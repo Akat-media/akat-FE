@@ -32,7 +32,7 @@ export async function checkAdManagerAccess(): Promise<boolean> {
     if (!user?.email) return false;
 
     const data = await handleSupabaseError(
-      supabase.from('ad_manager_access').select('id').eq('email', user.email).single()
+      await supabase.from('ad_manager_access').select('id').eq('email', user.email).single()
     );
 
     return !!data;
@@ -44,13 +44,13 @@ export async function checkAdManagerAccess(): Promise<boolean> {
 
 export async function getSystemAdAccounts(): Promise<SystemAdAccount[]> {
   try {
-    return await handleSupabaseError(
-      supabase
-        .from('system_ad_accounts')
-        .select('*')
-        .eq('available', true)
-        .order('created_at', { ascending: false })
-    );
+    const query = supabase
+      .from('system_ad_accounts')
+      .select('*')
+      .eq('available', true)
+      .order('created_at', { ascending: false });
+
+    return await handleSupabaseError(await query);
   } catch (error) {
     console.error('Error fetching system ad accounts:', error);
     throw error;
@@ -73,7 +73,7 @@ export async function getRentals(userId?: string): Promise<AdAccountRental[]> {
       query.eq('user_id', userId);
     }
 
-    return await handleSupabaseError(query);
+    return await handleSupabaseError(await query);
   } catch (error) {
     console.error('Error fetching rentals:', error);
     throw error;
@@ -93,7 +93,7 @@ export async function createRental(
 
     // Check if account is available
     const account = await handleSupabaseError(
-      supabase
+      await supabase
         .from('system_ad_accounts')
         .select('*')
         .eq('id', accountId)
@@ -107,19 +107,19 @@ export async function createRental(
 
     // Check for existing active rentals
     const existingRentals = await handleSupabaseError(
-      supabase
+      await supabase
         .from('ad_account_rentals')
         .select('*')
         .eq('account_id', accountId)
         .eq('status', 'active')
     );
 
-    if (existingRentals.length > 0) {
+    if (Array.isArray(existingRentals) && existingRentals.length > 0) {
       throw new Error('This ad account is already rented');
     }
 
     return await handleSupabaseError(
-      supabase
+      await supabase
         .from('ad_account_rentals')
         .insert({
           account_id: accountId,
@@ -143,7 +143,7 @@ export async function updateRentalStatus(
 ): Promise<void> {
   try {
     await handleSupabaseError(
-      supabase
+      await supabase
         .from('ad_account_rentals')
         .update({
           status,

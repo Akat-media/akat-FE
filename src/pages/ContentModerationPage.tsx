@@ -120,7 +120,7 @@ function ContentModerationPage() {
         name: page.pageName,
         avatarUrl: page.avatarUrl,
         followerCount: page.followerCount,
-        isMonitored: useMonitoringStore.getState().getPageMonitoring(page.pageId),
+        isMonitored: useMonitoringStore.getState().getPageMonitoring(page.pageId) ?? false,
       }));
 
       setPages(monitoredPages);
@@ -212,7 +212,6 @@ function ContentModerationPage() {
     }
   };
 
-   
   const saveConfig = async () => {
     if (!selectedPage) return;
     try {
@@ -231,7 +230,6 @@ function ContentModerationPage() {
       setSavingConfig(false);
     }
   };
-   
 
   const addEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

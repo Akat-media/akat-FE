@@ -18,9 +18,16 @@ interface MonitoringState {
   getPageMonitoring: (pageId: string) => boolean | undefined;
   syncWithDatabase: () => Promise<void>;
 }
+interface ModerationEngine {
+  page_id: string;
+  engine_status: 'active' | 'inactive' | string;
+}
 
-export const useMonitoringStore = create(
-  persist<MonitoringState>(
+export const useMonitoringStore = create<
+  MonitoringState,
+  [['zustand/persist', Partial<MonitoringState>]]
+>(
+  persist(
     (set, get) => ({
       monitoredPages: {},
       loading: false,
@@ -30,7 +37,6 @@ export const useMonitoringStore = create(
 
       setPageMonitoring: async (pageId: string, isMonitored: boolean) => {
         try {
-          // Set loading state for specific page
           console.log('Starting monitoring toggle:', { pageId, isMonitored });
           set((state) => ({
             loadingPages: { ...state.loadingPages, [pageId]: true },
@@ -44,13 +50,9 @@ export const useMonitoringStore = create(
             .eq('type', 'moderation')
             .single();
 
-          console.log('Current engine state:', { currentEngine, fetchError });
-
           if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
           if (!currentEngine) {
-            console.log('Creating new engine');
-            // Create new engine
             const { error: insertError } = await supabase.from('auto_engines').insert({
               name: 'Content Moderation',
               description: 'Automated content moderation for Facebook page',
@@ -63,8 +65,6 @@ export const useMonitoringStore = create(
 
             if (insertError) throw insertError;
           } else {
-            console.log('Updating existing engine:', currentEngine.id);
-            // Update existing engine
             const { error: updateError } = await supabase
               .from('auto_engines')
               .update({
@@ -76,8 +76,6 @@ export const useMonitoringStore = create(
             if (updateError) throw updateError;
           }
 
-          // Update local state
-          console.log('Updating local state:', { pageId, isMonitored });
           set((state) => ({
             monitoredPages: {
               ...state.monitoredPages,
@@ -86,76 +84,60 @@ export const useMonitoringStore = create(
             loadingPages: { ...state.loadingPages, [pageId]: false },
           }));
         } catch (err) {
-          console.error('Error in setPageMonitoring:', err);
-          // Set error state but preserve existing state
           set((state) => ({
             error: err instanceof Error ? err.message : 'Failed to update monitoring status',
             loadingPages: { ...state.loadingPages, [pageId]: false },
             monitoredPages: {
               ...state.monitoredPages,
-              [pageId]: state.monitoredPages[pageId], // Keep existing state on error
+              [pageId]: state.monitoredPages[pageId],
             },
           }));
-          console.error('Error updating monitoring status:', err);
         }
       },
 
       syncWithDatabase: async () => {
         try {
-          console.log('Starting database sync');
           set({
             syncing: true,
             error: null,
           });
 
-          // Get all pages with their latest moderation status
           const { data: moderationEngines, error: fetchError } = await supabase.rpc(
             'get_latest_moderation_status',
             {}
           );
 
-          console.log('Sync response:', { moderationEngines, fetchError });
-
           if (fetchError) throw fetchError;
 
-          // Create new state object
           const newMonitoredPages: MonitoredPages = {};
 
-          // Update status for pages that have a configuration
-          moderationEngines?.forEach((engine) => {
+          moderationEngines?.forEach((engine: ModerationEngine) => {
             if (engine.engine_status) {
               newMonitoredPages[engine.page_id] = engine.engine_status === 'active';
             }
           });
 
-          console.log('New monitored pages state:', newMonitoredPages);
-
-          // Set new state
           set({
             monitoredPages: newMonitoredPages,
             syncing: false,
             error: null,
           });
         } catch (err) {
-          console.error('Error in syncWithDatabase:', err);
-          // Set error state but preserve existing state
           set((state) => ({
             error: err instanceof Error ? err.message : 'Failed to sync with database',
-            monitoredPages: state.monitoredPages, // Keep existing state on error
+            monitoredPages: state.monitoredPages,
             syncing: false,
           }));
-          console.error('Error syncing with database:', err);
         }
       },
+
       initializeMonitoring: (pageIds: string[]) => {
-        // Set loading state and initialize loading state for each page
         set((state) => ({
           monitoredPages: state.monitoredPages,
           loadingPages: pageIds.reduce((acc, id) => ({ ...acc, [id]: false }), {}),
           loading: true,
         }));
 
-        // Immediately sync with database
         get()
           .syncWithDatabase()
           .finally(() => {
@@ -167,17 +149,15 @@ export const useMonitoringStore = create(
 
       getPageMonitoring: (pageId: string) => {
         const state = get();
-        // Return current state even while loading
         if (state.monitoredPages && state.monitoredPages[pageId] !== undefined) {
           return state.monitoredPages[pageId];
         }
-        // Return false as default state
         return false;
       },
     }),
     {
       name: 'monitoring-storage',
-      partialize: (state) => ({
+      partialize: (state: MonitoringState): Partial<MonitoringState> => ({
         monitoredPages: state.monitoredPages,
       }),
     }

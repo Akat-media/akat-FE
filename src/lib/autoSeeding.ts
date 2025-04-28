@@ -64,7 +64,7 @@ function calculateEngagementScore(post: any): number {
   return likes * 1 + comments * 2 + shares * 3;
 }
 
-function generateRecommendedActions(): { likes: number; comments: string[] } {
+function generateRecommendedActions(post: any): { likes: number; comments: string[] } {
   const baseComments = [
     'Great post! 👍',
     'This is amazing! 🔥',
@@ -73,11 +73,16 @@ function generateRecommendedActions(): { likes: number; comments: string[] } {
     'Thanks for sharing! 🙏',
   ];
 
-  // const engagementScore = calculateEngagementScore(post);
-  const recommendedLikes = Math.floor(Math.random() * 10) + 5; // Random number between 5-15
+  // Tính toán dựa trên post
+  const engagementScore = post.likes * 0.5 + post.comments.length * 2;
 
-  // Select relevant comments based on post content and engagement
-  const selectedComments = baseComments.sort(() => Math.random() - 0.5).slice(0, 2);
+  // Like được tính dựa trên engagementScore
+  const recommendedLikes =
+    engagementScore > 10 ? Math.floor(Math.random() * 10) + 10 : Math.floor(Math.random() * 5) + 5;
+
+  const selectedComments = baseComments
+    .sort(() => Math.random() - 0.5)
+    .slice(0, engagementScore > 5 ? 2 : 1);
 
   return {
     likes: recommendedLikes,

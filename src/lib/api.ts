@@ -31,7 +31,7 @@ export const authenticateRequest = (req: any, res: any, next: any) => {
     return res.status(401).json({ message: 'No token provided' });
   }
 
-  const decoded = verifyToken(token);
+  const decoded = verifyToken(token) as { user: any };
   if (!decoded) {
     return res.status(401).json({ message: 'Invalid token' });
   }

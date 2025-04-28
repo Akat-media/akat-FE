@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabaseUrl =
@@ -17,30 +18,33 @@ if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
 } else {
   console.warn('Missing Supabase environment variables');
-  // Create a mock client that won't throw errors
+
   supabase = {
-    from: () => ({
-      insert: () => Promise.resolve({ data: null, error: null }),
-      select: () => Promise.resolve({ data: null, error: null }),
-      update: () => Promise.resolve({ data: null, error: null }),
+    from: (table: string) => ({
+      select: (columns?: string) => Promise.resolve({ data: [], error: null }),
+      insert: (values: any) => Promise.resolve({ data: null, error: null }),
+      update: (values: any) => Promise.resolve({ data: null, error: null }),
       delete: () => Promise.resolve({ data: null, error: null }),
-      eq: () => ({
-        single: () => Promise.resolve({ data: null, error: null }),
-        limit: () => Promise.resolve({ data: null, error: null }),
-        select: () => Promise.resolve({ data: null, error: null }),
+      eq: (column: string, value: any) => ({
+        select: (columns?: string) => Promise.resolve({ data: [], error: null }),
+        single: () => Promise.resolve({ data: null, error: { code: 'PGRST116' } }),
       }),
     }),
-    rpc: () => Promise.resolve({ data: null, error: null }),
+    rpc: (fn: string, params?: any) => Promise.resolve({ data: null, error: null }),
     auth: {
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
     },
-    channel: () => ({
-      on: () => ({
-        subscribe: () => {},
+    channel: (name: string) => ({
+      on: <T>(
+        event: 'postgres_changes',
+        filter: any,
+        callback: (payload: RealtimePostgresChangesPayload<any>) => void
+      ) => ({
+        subscribe: () => ({}) as RealtimeChannel,
       }),
     }),
-    removeChannel: () => {},
-  };
+    removeChannel: (channel: RealtimeChannel) => {},
+  } as any;
 }
 
 export interface WebhookConfig {
@@ -94,7 +98,9 @@ export const verifyWebhook = async (
     }
 
     // Check if the token matches any of our stored tokens
-    const validToken = configs?.some((config) => config.verify_token === token);
+    const validToken = configs?.some(
+      (config: { verify_token: string }) => config.verify_token === token
+    );
 
     if (!validToken) {
       console.error('Invalid webhook token:', token);
@@ -161,8 +167,7 @@ export const getWebhookConfig = async (pageId: string): Promise<WebhookConfig | 
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found error
+      if ((error as any).code === 'PGRST116') {
         return null;
       }
       throw error;
@@ -179,27 +184,22 @@ export const getWebhookConfig = async (pageId: string): Promise<WebhookConfig | 
  * Subscribe to webhook events for violations
  */
 export const subscribeToViolations = (callback: (violation: any) => void) => {
-  try {
-    const channel = supabase
-      .channel('new_violations')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'violations',
-        },
-        (payload) => {
-          callback(payload.new);
-        }
-      )
-      .subscribe();
+  const channel = supabase
+    .channel('new_violations')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'violations',
+      },
+      (payload: RealtimePostgresChangesPayload<any>) => {
+        callback(payload.new);
+      }
+    )
+    .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  } catch (error) {
-    console.error('Error subscribing to violations:', error);
-    return () => {};
-  }
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };

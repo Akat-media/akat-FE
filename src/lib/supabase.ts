@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -30,24 +31,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Add error handling wrapper
-export async function handleSupabaseError<T>(
-  promise: Promise<{ data: T | null; error: any }>
-): Promise<T> {
-  try {
-    const { data, error } = await promise;
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw new Error(error.message || 'An error occurred while fetching data');
-    }
-
-    if (!data) {
-      throw new Error('No data returned from the database');
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in Supabase operation:', error);
-    throw error;
+export function handleSupabaseError<T>(response: PostgrestSingleResponse<T>): T {
+  if (response.error) {
+    console.error('Supabase error:', response.error);
+    throw new Error(response.error.message || 'An error occurred while fetching data');
   }
+
+  if (response.data === null) {
+    throw new Error('No data returned from the database');
+  }
+
+  return response.data;
 }
