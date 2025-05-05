@@ -163,26 +163,31 @@ export async function getLongLivedPageToken(
 // Get Facebook Pages
 export async function getFacebookPages(accessToken: string): Promise<FacebookPage[]> {
   return new Promise((resolve, reject) => {
-    FB.api('/me/accounts', { access_token: accessToken }, async (response) => {
-      if (!response || response.error) {
-        reject(new Error(response?.error?.message || 'Failed to fetch pages'));
-        return;
+    FB.api(
+      'me/accounts?fields=id,name,link,category,picture{url},is_published,verification_status,tasks,followers_count,fan_count',
+      { access_token: accessToken },
+      async (response) => {
+        if (!response || response.error) {
+          reject(new Error(response?.error?.message || 'Failed to fetch pages'));
+          return;
+        }
+        console.log('response);', response);
+        const pages = response.data.map((page: any) => ({
+          id: page.id,
+          name: page.name,
+          access_token: page.access_token,
+          category: page.category || 'Unknown',
+          connected: false,
+          avatar_url: page.picture?.data?.url,
+          follower_count: page.followers_count || '',
+          fan_count: page.fan_count || '',
+          page_url: page.link,
+          page_type: page.followers_count ? 'new' : 'classic',
+        }));
+
+        resolve(pages);
       }
-
-      const pages = response.data.map((page: any) => ({
-        id: page.id,
-        name: page.name,
-        access_token: page.access_token,
-        category: page.category || 'Unknown',
-        connected: false,
-        avatar_url: page.picture?.data?.url,
-        follower_count: page.followers_count || page.fan_count,
-        page_url: page.link,
-        page_type: page.followers_count ? 'new' : 'classic',
-      }));
-
-      resolve(pages);
-    });
+    );
   });
 }
 
@@ -224,7 +229,7 @@ export async function getFacebookPageInfo(
 export async function connectFacebookPage(page: FacebookPage) {
   try {
     // console.log('Connecting Facebook page:', page.name);
-
+    console.log('Connecting Facebook page:', page);
     const {
       data: { user },
     } = await supabase.auth.getUser();

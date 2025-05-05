@@ -36,6 +36,7 @@ import RegisterPage from './pages/RegisterPage.tsx';
 import NotFoundPage from './pages/NotFoundPage.tsx';
 import { useAuthStore } from './store/authStore.ts';
 import ViolationAlert from './components/ViolationAlert.tsx';
+import ConnectPageV2 from './pages/connect-page-v2/index.tsx';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
@@ -380,6 +381,7 @@ function App() {
                       </Route>
                       <Route path="resources" element={<ResourcePage />} />
                       <Route path="connection" element={<ConnectionPage />} />
+                      <Route path="test" element={<ConnectPageV2 />} />
                       <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                   </main>
@@ -402,6 +404,7 @@ function App() {
           </Route>
           <Route path="resources" element={<ResourcePage />} />
           <Route path="connection" element={<ConnectionPage />} />
+          <Route path="test" element={<ConnectPageV2 />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
