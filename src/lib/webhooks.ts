@@ -23,10 +23,9 @@ export async function handleWebhook(payload: WebhookPayload) {
   }
 }
 
-function isValidSignature(): boolean {
-  // Implement signature validation logic here
-  // This is a placeholder that always returns true
-  return true;
+function isValidSignature(payload: WebhookPayload): boolean {
+  // Thêm logic xác thực chữ ký ở đây
+  return true; // placeholder
 }
 
 async function handleAutomationTrigger(data: any) {

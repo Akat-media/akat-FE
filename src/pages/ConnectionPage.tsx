@@ -492,6 +492,7 @@ function ConnectionPage() {
 
   // Hiển thị nội dung của các section khác
   const renderOtherSection = () => {
+    return <div>Other Content</div>;
     // return <section.component onConnect={handleConnectSuccess} />;
   };
 
@@ -531,11 +532,11 @@ function ConnectionPage() {
                         }`}
                       />
                     </button>
-
-                    {/*HERE*/}
                     {expandedSection === section.id && (
                       <div className="px-4 pb-4">
-                        {section.id === 'facebook' ? renderFacebookSection() : renderOtherSection()}
+                        {section.id === 'facebook'
+                          ? renderFacebookSection() || null
+                          : renderOtherSection() || null}
                       </div>
                     )}
                   </div>

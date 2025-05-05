@@ -74,7 +74,7 @@ function ConnectedPages() {
   const [pages, setPages] = useState<ConnectedPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [setShowConfig] = useState<string | null>(null);
+  const [showConfig, setShowConfig] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [pageToDelete, setPageToDelete] = useState<ConnectedPage | null>(null);
   const { syncing } = useMonitoringStore();
@@ -176,25 +176,25 @@ function ConnectedPages() {
     }
   };
 
-  // const handleRefresh = async (page: ConnectedPage) => {
-  //   if (!page.access_token) {
-  //     setError('No access token available for this page');
-  //     return;
-  //   }
-  //
-  //   try {
-  //     setActionInProgress(page.page_id);
-  //     setError(null);
-  //
-  //     await refreshPageConnection(page.page_id, page.access_token);
-  //     await fetchPages();
-  //   } catch (err) {
-  //     console.error('Refresh error:', err);
-  //     setError(err instanceof Error ? err.message : 'Failed to refresh connection');
-  //   } finally {
-  //     setActionInProgress(null);
-  //   }
-  // };
+  const handleRefresh = async (page: ConnectedPage) => {
+    if (!page.access_token) {
+      setError('No access token available for this page');
+      return;
+    }
+
+    try {
+      setActionInProgress(page.page_id);
+      setError(null);
+
+      //await refreshPageConnection(page.page_id, page.access_token);
+      await fetchPages();
+    } catch (err) {
+      console.error('Refresh error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh connection');
+    } finally {
+      setActionInProgress(null);
+    }
+  };
 
   if (loading) {
     return (

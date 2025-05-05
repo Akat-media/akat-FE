@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-// interface WebhookSetupProps {
-//   pageId: string;
-// }
+interface WebhookSetupProps {
+  pageId: string;
+}
 
-function WebhookSetup() {
+function WebhookSetup({ pageId }: WebhookSetupProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -16,6 +16,8 @@ function WebhookSetup() {
     try {
       setLoading(true);
       setError(null);
+
+      console.log('Page ID:', pageId);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));

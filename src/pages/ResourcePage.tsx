@@ -212,8 +212,8 @@ function ResourcePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [setShowAddPage] = useState(false);
-  const [setShowExport] = useState(false);
+  const [showAddPage, setShowAddPage] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
 
   // Stats for the dashboard based on date range
