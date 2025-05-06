@@ -37,9 +37,11 @@ import NotFoundPage from './pages/NotFoundPage.tsx';
 import { useAuthStore } from './store/authStore.ts';
 import ViolationAlert from './components/ViolationAlert.tsx';
 import ConnectPageV2 from './pages/connect-page-v2/index.tsx';
+import { ToastContainer } from 'react-toastify';
+import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const user = useAuthStore((state) => state.user);
+  const {user} = useAuth();
   const loading = useAuthStore((state) => state.loading);
 
   if (loading) {
@@ -54,17 +56,16 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
   return user ? <>{children}</> : <Navigate to="/login" />;
 }
 
 function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
-  const signOut = useAuthStore((state) => state.signOut);
-  const user = useAuthStore((state) => state.user);
   const [automationOpen, setAutomationOpen] = useState(false);
   const [moderationOpen, setModerationOpen] = useState(false);
+  const {logout,user} = useAuth();
+
 
   return (
     <>
@@ -322,10 +323,10 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
         <div className="border-t border-gray-100 p-4">
           <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl mb-4">
-            <div className="text-sm font-medium text-gray-600 truncate">{user?.email}</div>
+            <div className="text-sm font-medium text-gray-600 truncate">{user}</div>
           </div>
           <button
-            onClick={() => signOut()}
+            onClick={() => logout() }
             className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-red-50 text-red-600 transition-all duration-200"
           >
             <LogOut className="w-5 h-5" />
@@ -341,74 +342,79 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          element={
-            <PrivateRoute>
-              <div className="flex min-h-screen bg-gray-50">
-                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-                <div className="flex-1 flex flex-col min-h-screen">
-                  <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b">
-                    <button
-                      onClick={() => setSidebarOpen(true)}
-                      className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                    >
-                      <Menu className="w-6 h-6 text-gray-600" />
-                    </button>
-                    <div className="flex items-center gap-3">
-                      <Bot className="w-6 h-6 text-blue-600" />
-                      <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        AKA Platform
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            element={
+              <PrivateRoute>
+                <div className="flex min-h-screen bg-gray-50">
+                  <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                  <div className="flex-1 flex flex-col min-h-screen">
+                    <div className="lg:hidden flex items-center justify-between p-4 bg-white border-b">
+                      <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                      >
+                        <Menu className="w-6 h-6 text-gray-600" />
+                      </button>
+                      <div className="flex items-center gap-3">
+                        <Bot className="w-6 h-6 text-blue-600" />
+                        <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                          AKA Platform
+                        </div>
                       </div>
+                      <div className="w-10" />
                     </div>
-                    <div className="w-10" />
+                    <main className="flex-1 overflow-x-hidden overflow-y-auto">
+                      <Routes>
+                        <Route index element={<HomePage />} />
+                        <Route path="automation">
+                          <Route index element={<AutomationDashboardPage />} />
+                          <Route path="templates" element={<AutomationTemplatePage />} />
+                          <Route path="custom" element={<AutomationPage />} />
+                        </Route>
+                        <Route path="moderation">
+                          <Route index element={<Navigate to="/moderation/overview" />} />
+                          <Route path="overview" element={<ContentOverviewPage />} />
+                          <Route path="posts" element={<PostManagementPage />} />
+                        </Route>
+                        <Route path="resources" element={<ResourcePage />} />
+                        <Route path="connection" element={<ConnectionPage />} />
+                        <Route path="test" element={<ConnectPageV2 />} />
+                        <Route path="*" element={<NotFoundPage />} />
+                      </Routes>
+                    </main>
+                    <ViolationAlert />
                   </div>
-                  <main className="flex-1 overflow-x-hidden overflow-y-auto">
-                    <Routes>
-                      <Route index element={<HomePage />} />
-                      <Route path="automation">
-                        <Route index element={<AutomationDashboardPage />} />
-                        <Route path="templates" element={<AutomationTemplatePage />} />
-                        <Route path="custom" element={<AutomationPage />} />
-                      </Route>
-                      <Route path="moderation">
-                        <Route index element={<Navigate to="/moderation/overview" />} />
-                        <Route path="overview" element={<ContentOverviewPage />} />
-                        <Route path="posts" element={<PostManagementPage />} />
-                      </Route>
-                      <Route path="resources" element={<ResourcePage />} />
-                      <Route path="connection" element={<ConnectionPage />} />
-                      <Route path="test" element={<ConnectPageV2 />} />
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Routes>
-                  </main>
-                  <ViolationAlert />
                 </div>
-              </div>
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<HomePage />} />
-          <Route path="automation">
-            <Route index element={<AutomationDashboardPage />} />
-            <Route path="templates" element={<AutomationTemplatePage />} />
-            <Route path="custom" element={<AutomationPage />} />
+              </PrivateRoute>
+            }
+          >
+            <Route index element={<HomePage />} />
+            <Route path="automation">
+              <Route index element={<AutomationDashboardPage />} />
+              <Route path="templates" element={<AutomationTemplatePage />} />
+              <Route path="custom" element={<AutomationPage />} />
+            </Route>
+            <Route path="moderation">
+              <Route index element={<Navigate to="/moderation/overview" />} />
+              <Route path="overview" element={<ContentOverviewPage />} />
+              <Route path="posts" element={<PostManagementPage />} />
+            </Route>
+            <Route path="resources" element={<ResourcePage />} />
+            <Route path="connection" element={<ConnectionPage />} />
+            <Route path="test" element={<ConnectPageV2 />} />
           </Route>
-          <Route path="moderation">
-            <Route index element={<Navigate to="/moderation/overview" />} />
-            <Route path="overview" element={<ContentOverviewPage />} />
-            <Route path="posts" element={<PostManagementPage />} />
-          </Route>
-          <Route path="resources" element={<ResourcePage />} />
-          <Route path="connection" element={<ConnectionPage />} />
-          <Route path="test" element={<ConnectPageV2 />} />
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
+
+      <ToastContainer />
+    </AuthProvider>
+
   );
 }
 

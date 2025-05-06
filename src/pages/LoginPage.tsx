@@ -1,20 +1,71 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { toast } from "react-toastify";
 import { useAuthStore } from '../store/authStore.ts';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext.tsx';
+
 
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const signIn = useAuthStore((state) => state.signIn);
+  // const signIn = useAuthStore((state) => state.signIn);
+  const location = useLocation();
+  const toastShownRef = useRef(false) // Flag để tránh gọi 2 lần
+  const [showPassword, setShowPassword] = useState(false);
+  const togglePassword = () => {
+    setShowPassword((prev) => !prev);
+  }
+  const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
+  const {login} = useAuth();
+
+  useEffect(() => {
+    if (location.state?.showSuccess && !toastShownRef.current) {
+      toastShownRef.current = true; // Đánh dấu đã gọi toast
+      toast.success('Đăng ký thành công!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+
+      // Reset state để không lặp lại toast khi refresh or back
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const payload = {
+      email: email,
+      password: password,
+    }
+
     try {
-      await signIn(email, password);
-      navigate('/');
+      // await signIn(email, password);
+
+      axios.post(`${VITE_BASE_URL}/login`, payload)
+        .then(response => {
+          // console.log("response:" + JSON.stringify(response.data.data.access_token));
+          login(response.data.data.user.email,response.data.data.access_token);
+          navigate('/', {
+            state: { showSuccess: true },
+          });
+        })
+        .catch(error => {
+          if(error.response && error.response.data) {
+            toast.error(error.response.data.message);
+          }
+        })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -25,9 +76,6 @@ function LoginPage() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex flex-col items-center mb-8">
-            {/*<div className="p-4 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl mb-4">*/}
-            {/*  <Bot className="w-10 h-10 text-blue-600" />*/}
-            {/*</div>*/}
             <img
               src="/aka platform.png"
               alt="AKA Platform Logo"
@@ -77,13 +125,20 @@ function LoginPage() {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={!showPassword ? 'password' : 'text'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={togglePassword}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
               </div>
             </div>
 
