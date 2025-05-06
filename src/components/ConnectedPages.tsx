@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import {
   Trash2,
   RefreshCw,
@@ -11,26 +11,27 @@ import {
 import { supabase } from '../lib/supabase';
 import { disconnectFacebookPage } from '../lib/facebook';
 import { useMonitoringStore } from '../store/monitoringStore';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
-interface ConnectedPage {
+export interface ConnectedPage {
   id: string;
   page_id: string;
   page_name: string;
   status: 'connected' | 'disconnected';
   last_sync: string;
+  created_at: string;
   access_token?: string;
-  avatar_url?: string | null;
+  page_avatar_url?: string | null;
   follower_count?: number | null;
   page_type?: 'classic' | 'new' | null;
 }
-
 interface DeleteConfirmationProps {
   page: ConnectedPage;
   onConfirm: () => void;
   onCancel: () => void;
   isLoading: boolean;
 }
-
 function DeleteConfirmation({ page, onConfirm, onCancel, isLoading }: DeleteConfirmationProps) {
   return (
     <div className="absolute inset-0 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -69,125 +70,44 @@ function DeleteConfirmation({ page, onConfirm, onCancel, isLoading }: DeleteConf
     </div>
   );
 }
-
-function ConnectedPages() {
-  const [pages, setPages] = useState<ConnectedPage[]>([]);
-  const [loading, setLoading] = useState(true);
+function ConnectedPages({
+  pages,
+  loading,
+  setRefreshKey,
+}: {
+  pages: ConnectedPage[];
+  loading: boolean;
+  setRefreshKey: Dispatch<SetStateAction<number>>;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [pageToDelete, setPageToDelete] = useState<ConnectedPage | null>(null);
   const { syncing } = useMonitoringStore();
-
-  useEffect(() => {
-    fetchPages();
-  }, []);
-
-  const fetchPages = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // console.log('Fetching connected pages...');
-
-      // Get the current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // First, get all connections for the current user
-      const { data: connections, error: connectionsError } = await supabase
-        .from('facebook_connections')
-        .select('id, page_id, status, last_sync, access_token')
-        .eq('user_id', user.id)
-        .eq('status', 'connected');
-
-      if (connectionsError) {
-        console.error('Error fetching connections:', connectionsError);
-        throw new Error('Failed to fetch Facebook pages');
-      }
-
-      // console.log('Connections data:', connections);
-
-      if (!connections || connections.length === 0) {
-        setPages([]);
-        return;
-      }
-
-      // Then, get page details for each connection
-      const formattedPages: ConnectedPage[] = [];
-
-      for (const conn of connections) {
-        try {
-          // Get page details for this connection
-          const { data: pageDetails } = await supabase
-            .from('facebook_page_details')
-            .select('*')
-            .eq('connection_id', conn.id);
-
-          // Use the first page details if available, otherwise use default values
-          const pageDetail = pageDetails && pageDetails.length > 0 ? pageDetails[0] : null;
-
-          formattedPages.push({
-            id: conn.id,
-            page_id: conn.page_id,
-            page_name: pageDetail?.page_name || 'Unnamed Page',
-            status: conn.status as 'connected' | 'disconnected',
-            last_sync: conn.last_sync,
-            access_token: conn.access_token,
-            avatar_url: pageDetail?.page_avatar_url,
-            follower_count: pageDetail?.follower_count,
-            page_type: pageDetail?.page_type,
-          });
-        } catch (err) {
-          console.error('Error processing connection:', err);
-          // Continue with other connections
-        }
-      }
-
-      // console.log('Formatted pages:', formattedPages);
-      setPages(formattedPages);
-    } catch (err) {
-      console.error('Error in fetchPages:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch pages');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDisconnect = async (page: ConnectedPage) => {
     try {
-      // console.log("TEST HERE:" + page);
       setActionInProgress(page.page_id);
       setError(null);
-
-      console.log('MY PAGEEEEEE: ' + JSON.stringify(page));
-      await disconnectFacebookPage(page.page_id, page.id);
+      await axios
+        .delete(`${BaseUrl}/facebook-connection/${page.id}`)
+        .then((res) => setRefreshKey((prev) => prev + 1))
+        .catch((err) => setRefreshKey((prev) => prev + 1));
       setPageToDelete(null);
-      await fetchPages();
     } catch (err) {
-      console.error('Disconnect error:', err);
       setError(err instanceof Error ? err.message : 'Failed to disconnect page');
     } finally {
       setActionInProgress(null);
     }
   };
-
   const handleRefresh = async (page: ConnectedPage) => {
     if (!page.access_token) {
       setError('No access token available for this page');
       return;
     }
-
     try {
+      setRefreshKey((prev) => prev + 1);
       setActionInProgress(page.page_id);
       setError(null);
-
-      //await refreshPageConnection(page.page_id, page.access_token);
-      await fetchPages();
     } catch (err) {
       console.error('Refresh error:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh connection');
@@ -229,15 +149,15 @@ function ConnectedPages() {
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {page.avatar_url ? (
+                  {page.page_avatar_url ? (
                     <img
-                      src={page.avatar_url}
+                      src={page.page_avatar_url}
                       alt={page.page_name}
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <span className="text-xl font-bold text-gray-600">
-                      {page.page_name.charAt(0)}
+                      {page?.page_name?.charAt(0)}
                     </span>
                   )}
                 </div>
@@ -269,7 +189,7 @@ function ConnectedPages() {
                     </span>
                     <span className="text-gray-400">•</span>
                     <span className="text-gray-600">
-                      Cập nhật: {new Date(page.last_sync).toLocaleDateString()}
+                      Cập nhật: {new Date(page.created_at).toLocaleDateString()}
                     </span>
                     {page.follower_count && page.follower_count > 0 && (
                       <>
