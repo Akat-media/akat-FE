@@ -205,7 +205,7 @@ function PostSchedule() {
         {/* Upcoming posts */}
         <div className="col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100">
           <h3 className="font-medium mb-4">Sắp đăng</h3>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {scheduledPosts.map((post) => (
               <div
                 key={post.id}
@@ -266,8 +266,8 @@ function PostSchedule() {
                 </button>
               </div>
             </div>
-            <div className="p-4">
-              <div className="space-y-4">
+            <div className="max-h-screen overflow-y-auto px-1 py-1">
+              <div className="space-y-0.5 overflow-y-auto px-1 py-1 max-h-[500px]">
                 {/* Page Selection */}
                 <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl relative">
                   <img
@@ -295,10 +295,9 @@ function PostSchedule() {
                 <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
                   <textarea
                     placeholder="Bạn đang nghĩ gì?"
-                    className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
+                    className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
                 </div>
-
                 {/* Media Attachments */}
                 <div className="flex flex-wrap items-center gap-3 p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
                   <span className="font-medium text-gray-900">Thêm vào bài viết</span>

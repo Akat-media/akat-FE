@@ -125,7 +125,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
             </Link>
 
             {/* Automation */}
-            <div className="flex flex-col">
+            {/* <div className="flex flex-col">
               <button
                 onClick={() => setAutomationOpen(!automationOpen)}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 group relative"
@@ -204,7 +204,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                   <span>Tùy chỉnh</span>
                 </Link>
               </div>
-            </div>
+            </div> */}
 
             {/* Quản trị nội dung */}
             <Link
