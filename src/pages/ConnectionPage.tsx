@@ -11,10 +11,12 @@ import {
 } from 'lucide-react';
 import FacebookConnect from '../components/FacebookConnect';
 import LarkConnect from '../components/LarkConnect';
-import ConnectedPages from '../components/ConnectedPages';
+import ConnectedPages, { ConnectedPage } from '../components/ConnectedPages';
 import PanCakeConfig from '../components/PanCakeConfig';
 import { applyMigrations } from '../lib/migration';
 import { supabase } from '../lib/supabase';
+import { BaseUrl } from '../constants';
+import axios from 'axios';
 
 interface Guide {
   title: string;
@@ -174,7 +176,8 @@ function ConnectionPage() {
   const [connectedPagesCount, setConnectedPagesCount] = useState(0);
   const [showConnectedPages, setShowConnectedPages] = useState(false);
   const [currentGuide, setCurrentGuide] = useState<string>('default');
-
+  const [pages, setPages] = useState<ConnectedPage[]>([]);
+  const [loading, setLoading] = useState(false);
   // dem so luong page facebook da ket noi
   useEffect(() => {
     fetchConnectedPagesCount();
@@ -182,20 +185,20 @@ function ConnectionPage() {
 
   const fetchConnectedPagesCount = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      setLoading(true);
+      const response = await axios.get(`${BaseUrl}/facebook-connection`, {
+        params: {
+          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          status: 'connected',
+        },
+      });
 
-      const { count } = await supabase
-        .from('facebook_connections')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .eq('status', 'connected');
-
-      setConnectedPagesCount(count || 0);
+      setPages(response.data.data || []);
+      setConnectedPagesCount(response.data.data.length || 0);
     } catch (err) {
       console.error('Error fetching connected pages count:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -313,27 +316,27 @@ function ConnectionPage() {
   ];
 
   // chay migration tao bang fb_connection, fb_page_details, policy RLS
-  useEffect(() => {
-    const runMigrations = async () => {
-      try {
-        setMigrationRunning(true);
-        setError(null);
+  // useEffect(() => {
+  //   const runMigrations = async () => {
+  //     try {
+  //       setMigrationRunning(true);
+  //       setError(null);
 
-        const result = await applyMigrations();
-        if (!result.success) {
-          console.error('Migration failed:', result.error);
-          setError(`Database setup failed: ${result.error}`);
-        }
-      } catch (err) {
-        console.error('Migration error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to set up database');
-      } finally {
-        setMigrationRunning(false);
-      }
-    };
+  //       const result = await applyMigrations();
+  //       if (!result.success) {
+  //         console.error('Migration failed:', result.error);
+  //         setError(`Database setup failed: ${result.error}`);
+  //       }
+  //     } catch (err) {
+  //       console.error('Migration error:', err);
+  //       setError(err instanceof Error ? err.message : 'Failed to set up database');
+  //     } finally {
+  //       setMigrationRunning(false);
+  //     }
+  //   };
 
-    runMigrations();
-  }, []);
+  //   runMigrations();
+  // }, []);
 
   const handleConnectSuccess = () => {
     setShowConnectForm(null);
@@ -440,7 +443,7 @@ function ConnectionPage() {
 
     // Trường hợp đang hiển thị danh sách trang đã kết nối
     if (showConnectedPages) {
-      return <ConnectedPages key={refreshKey} />;
+      return <ConnectedPages setRefreshKey={setRefreshKey} pages={pages} loading={loading} />;
     }
 
     // Trường hợp mặc định - hiển thị các nút tùy chọn

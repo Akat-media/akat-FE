@@ -6,17 +6,20 @@ import {
   getFacebookPages,
   connectFacebookPage,
   exchangeForLongLivedToken,
+  getLongLivedPageToken,
+  REQUIRED_PERMISSIONS,
 } from '../lib/facebook';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
+import FacebookGraphAdapter from '../constants/FacebookGraphAdapter';
 
 interface FacebookConnectProps {
   onConnect: () => void;
 }
-
 function FacebookConnect({ onConnect }: FacebookConnectProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
-
   useEffect(() => {
     initFacebookSDK()
       .then(() => setSdkReady(true))
@@ -24,45 +27,139 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
         setError(err instanceof Error ? err.message : 'Failed to initialize Facebook SDK')
       );
   }, []);
-
   const handleConnect = async () => {
     if (!sdkReady) {
       setError('Facebook SDK is not ready yet. Please try again.');
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
-
       // Login and get access token
       const authResponse = await loginWithFacebook();
-
       // Exchange for long-lived user token
       const longLivedToken = await exchangeForLongLivedToken(authResponse.accessToken);
       // console.log('Obtained long-lived user token');
-
-      // Get pages
       const pages = await getFacebookPages(longLivedToken);
-      // console.log(`Found ${pages.length} pages to connect`);
-
-      // Connect all pages
-      await Promise.all(
-        pages.map((page) => {
-          // Use the page object but replace the access_token with our long-lived user token
-          return connectFacebookPage({
-            ...page,
-            access_token: longLivedToken,
-          });
-        })
+      const fanpage = await Promise.all(
+        pages.map((page) => connectFacebookPageV2({ ...page, access_token: longLivedToken }))
       );
-
+      console.log('fanpage', fanpage);
       onConnect();
     } catch (err) {
       console.error('Connect error:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect to Facebook');
     } finally {
       setLoading(false);
+    }
+  };
+  const fetchPostsCount = async (
+    since: number,
+    until: number,
+    token: string,
+    page_id: string
+  ): Promise<number> => {
+    let totalCount = 0;
+    // Graph API endpoint với tham số since và until (timestamp theo giây)
+    let url = `https://graph.facebook.com/v22.0/${page_id}/posts?since=${since}&until=${until}&limit=25&access_token=${token}`;
+    while (url) {
+      const response = await axios.get(url);
+      const data = response.data;
+      // console.log('data' + data);
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+      if (data.data && Array.isArray(data.data)) {
+        totalCount += data.data.length;
+      }
+      // Nếu có phân trang, chuyển sang trang tiếp theo, nếu không dừng vòng lặp.
+      url = data.paging && data.paging.next ? data.paging.next : '';
+    }
+
+    return totalCount;
+  };
+  const connectFacebookPageV2 = async (page: any) => {
+    const today = Math.floor(Date.now() / 1000);
+    const since = today - 28 * 24 * 60 * 60;
+    try {
+      await axios.post(`${BaseUrl}/facebook-fan-page`, {
+        id: page.id,
+        page_name: page.name,
+        page_category: page.category,
+        page_url: page.page_url,
+        page_avatar_url: page.avatar_url,
+        follower_count: page.follower_count,
+        fan_count: page.fan_count,
+        page_type: page.page_type,
+        connection_id: '1',
+      });
+      const longLivedUserToken = await exchangeForLongLivedToken(page.access_token);
+      const longLivedPageToken = await getLongLivedPageToken(page.id, longLivedUserToken);
+      const { data: existingConnection } = await axios.get(`${BaseUrl}/facebook-connection`, {
+        params: {
+          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          facebook_fanpage_id: page.id,
+        },
+      });
+      const postsCount = await fetchPostsCount(since, today, longLivedPageToken, page.id);
+      console.log('postsCount', postsCount);
+      if (existingConnection.data.length > 0) {
+        console.log(1);
+        await axios.put(`${BaseUrl}/facebook-connection/${existingConnection.data?.[0]?.id}`, {
+          access_token: [longLivedPageToken],
+          status: 'connected',
+          last_sync: new Date().toISOString(),
+          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          facebook_fanpage_id: page.id,
+        });
+      } else {
+        const nameAndImage = `https://graph.facebook.com/v22.0/${page.id}?fields=name,picture&access_token=${longLivedPageToken}`;
+        const followersUrl = `https://graph.facebook.com/v22.0/${page.id}/insights?metric=page_daily_follows_unique&period=days_28&access_token=${longLivedPageToken}`;
+        const postRemain = `https://graph.facebook.com/v22.0/${page.id}/insights?metric=page_impressions_unique,page_post_engagements&period=days_28&access_token=${longLivedPageToken}`;
+        const categoryAndStatusPage = `https://graph.facebook.com/v22.0/${page.id}?fields=category%2Cis_published&access_token=${longLivedPageToken}`;
+
+        const [nameImageRes, followersRes, postRemainRes, categoryAndStatusRes] = await Promise.all(
+          [
+            axios.get(nameAndImage),
+            axios.get(followersUrl),
+            axios.get(postRemain),
+            axios.get(categoryAndStatusPage),
+            axios.post(`${BaseUrl}/facebook-connection`, {
+              access_token: [longLivedPageToken],
+              status: 'connected',
+              permissions: REQUIRED_PERMISSIONS,
+              last_sync: null,
+              user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+              facebook_fanpage_id: page.id,
+              role_id: '3914421c-647d-44ba-ae18-1487065d99e2',
+              page_url: page.page_url,
+              page_avatar_url: page.avatar_url,
+              follower_count: page.follower_count,
+              fan_count: page.fan_count,
+              page_type: page.page_type,
+            }),
+          ]
+        );
+        // console.log('fidnal', nameImageRes, followersRes, postRemainRes, categoryAndStatusRes);
+        // console.log(FacebookGraphAdapter.transformFollowers(followersRes.data));
+        await axios.post(`${BaseUrl}/facebook-page-insight`, {
+          posts: postsCount,
+          approach: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).impressions,
+          interactions: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).engagements,
+          follows: FacebookGraphAdapter.transformFollowers(followersRes.data)?.followersCount || 0,
+          name: nameImageRes?.data?.name || '',
+          image_url: nameImageRes?.data?.picture?.data?.url || '',
+          category: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
+            .category,
+          status: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
+            .isPublished,
+          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          facebook_fanpage_id: page.id,
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting Facebook page:', error);
+      throw error;
     }
   };
 

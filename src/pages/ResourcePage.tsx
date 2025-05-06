@@ -18,6 +18,8 @@ import {
   MessageCircleHeart,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
 interface StatCard {
   title: string;
@@ -44,8 +46,8 @@ interface FacebookPage {
     posts: number;
     likes: number;
   };
-  status: 'active' | 'inactive';
-  avatar?: string;
+  status: string;
+  image_url?: string;
 }
 
 type DateRange = '7' | '30' | '90';
@@ -104,9 +106,9 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-4">
             {/* Avatar */}
-            {page.avatar ? (
+            {page.image_url ? (
               <img
-                src={page.avatar}
+                src={page.image_url}
                 alt={page.name}
                 className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
               />
@@ -140,12 +142,12 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
           <div className="sm:ml-auto">
             <span
               className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                page.status === 'active'
+                page.status === 'Hoạt động'
                   ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
-              {page.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+              {page.status === 'Hoạt động' ? 'Hoạt động' : 'Không hoạt động'}
             </span>
           </div>
         </div>
@@ -182,7 +184,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <div className="p-2 bg-orange-50 rounded-lg">
               <MessageSquare className="w-5 h-5 text-orange-500" />
             </div>
@@ -190,7 +192,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
               <div className="font-medium">{page.metrics.responseRate.toFixed(1)}%</div>
               <div className="text-xs text-gray-500">phản hồi</div>
             </div>
-          </div>
+          </div> */}
 
           <div className="flex items-center gap-2">
             <div className="p-2 bg-red-50 rounded-lg">
@@ -283,57 +285,31 @@ function ResourcePage() {
       setLoading(true);
       setError(null);
 
-      const { data: connections, error: connectionsError } = await supabase.from(
-        'facebook_connections'
-      ).select(`
-          id,
-          page_id,
-          status,
-          facebook_page_details (
-            page_name,
-            page_category,
-            follower_count,
-            page_avatar_url
-          )
-        `);
+      const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+        params: {
+          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+        },
+      });
 
-      if (connectionsError) throw connectionsError;
+      const connections = response.data.data;
 
       const transformedPages: FacebookPage[] =
-        connections?.map((conn) => ({
+        connections?.map((conn: any) => ({
           id: conn.id,
-          name: conn.facebook_page_details?.[0]?.page_name || 'Unnamed Page',
+          name: conn.name || 'Unnamed Page',
           verified: true,
-          category: conn.facebook_page_details?.[0]?.page_category || 'Unknown',
+          category: conn.category || 'Unknown',
           metrics: {
-            followers: conn.facebook_page_details?.[0]?.follower_count || 0,
-            likes: Math.floor(Math.random() * 10000), // Simulated likes count
-            engagement: 124,
-            reach: 3452,
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions,
+            reach: conn.approach,
             responseRate: 94.8,
-            posts: 78,
+            posts: conn.posts,
           },
-          status: conn.status === 'connected' ? 'active' : 'inactive',
-          avatar: conn.facebook_page_details?.[0]?.page_avatar_url,
+          status: conn.status,
+          image_url: conn.image_url,
         })) || [];
-
-      if (transformedPages.length === 0) {
-        transformedPages.push({
-          id: 'example',
-          name: 'Thỏ Store',
-          verified: true,
-          category: 'Thời trang',
-          metrics: {
-            followers: 406,
-            likes: 1250,
-            engagement: 124,
-            reach: 3452,
-            responseRate: 94.8,
-            posts: 78,
-          },
-          status: 'active',
-        });
-      }
 
       setPages(transformedPages);
     } catch (err) {

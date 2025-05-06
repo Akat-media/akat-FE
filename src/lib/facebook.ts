@@ -21,6 +21,7 @@ export interface FacebookPage {
   category: string;
   connected: boolean;
   avatar_url?: string | null;
+  fan_count?: string | null;
   follower_count?: number | null;
   page_url?: string | null;
   page_type?: 'classic' | 'new' | null;
