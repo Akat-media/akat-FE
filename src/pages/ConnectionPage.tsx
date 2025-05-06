@@ -166,6 +166,7 @@ interface ConnectionSection {
 }
 
 function ConnectionPage() {
+  const user = localStorage.getItem('user');
   const [showConnectForm, setShowConnectForm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -188,7 +189,7 @@ function ConnectionPage() {
       setLoading(true);
       const response = await axios.get(`${BaseUrl}/facebook-connection`, {
         params: {
-          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          user_id: JSON.parse(user || '{}')?.user_id,
           status: 'connected',
         },
       });

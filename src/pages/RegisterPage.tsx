@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Phone } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
-import { toast } from "react-toastify";
+import { toast } from 'react-toastify';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 function RegisterPage() {
@@ -19,7 +19,7 @@ function RegisterPage() {
 
   const togglePassword = () => {
     setShowPassword((prev) => !prev);
-  }
+  };
 
   const validatePhone = (phone: string) => {
     const phoneRegex = /^0[35789][0-9]{8}$/;
@@ -32,23 +32,24 @@ function RegisterPage() {
     const payload = {
       email: email,
       password: password,
-      role_id: 'f0524313-ca16-4bf4-9469-148e35c2c945', // đang fix cứng id role admin
+      role_id: 'f0524313-ca16-4bf4-9469-148e35c2c945',
     };
 
     try {
       // await signUp(email, password, phone);
 
-      axios.post(`${VITE_BASE_URL}/user`, payload)
-        .then(response => {
+      axios
+        .post(`${VITE_BASE_URL}/user`, payload)
+        .then((response) => {
           navigate('/login', {
             state: { showSuccess: true },
           });
         })
-        .catch(error => {
-          if(error.response && error.response.data) {
+        .catch((error) => {
+          if (error.response && error.response.data) {
             toast.error(error.response.data.message);
           }
-        })
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -121,7 +122,6 @@ function RegisterPage() {
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
-
               </div>
             </div>
 

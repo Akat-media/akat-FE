@@ -41,7 +41,7 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const {user} = useAuth();
+  const { user } = useAuth();
   const loading = useAuthStore((state) => state.loading);
 
   if (loading) {
@@ -64,9 +64,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
   const isActive = (path: string) => location.pathname === path;
   const [automationOpen, setAutomationOpen] = useState(false);
   const [moderationOpen, setModerationOpen] = useState(false);
-  const {logout,user} = useAuth();
-
-
+  const { logout, user } = useAuth();
   return (
     <>
       {isOpen && (
@@ -323,10 +321,10 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
 
         <div className="border-t border-gray-100 p-4">
           <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl mb-4">
-            <div className="text-sm font-medium text-gray-600 truncate">{user}</div>
+            <div className="text-sm font-medium text-gray-600 truncate">{user?.user?.email}</div>
           </div>
           <button
-            onClick={() => logout() }
+            onClick={() => logout()}
             className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-red-50 text-red-600 transition-all duration-200"
           >
             <LogOut className="w-5 h-5" />
@@ -414,7 +412,6 @@ function App() {
 
       <ToastContainer />
     </AuthProvider>
-
   );
 }
 

@@ -17,6 +17,8 @@ interface FacebookConnectProps {
   onConnect: () => void;
 }
 function FacebookConnect({ onConnect }: FacebookConnectProps) {
+  const user = localStorage.getItem('user');
+  console.log(JSON.parse(user || '{}')?.user_id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
@@ -88,8 +90,8 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
         page_category: page.category,
         page_url: page.page_url,
         page_avatar_url: page.avatar_url,
-        follower_count: page.follower_count,
-        fan_count: page.fan_count,
+        follower_count: page.follower_count || 0,
+        fan_count: page.fan_count || 0,
         page_type: page.page_type,
         connection_id: '1',
       });
@@ -97,7 +99,7 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
       const longLivedPageToken = await getLongLivedPageToken(page.id, longLivedUserToken);
       const { data: existingConnection } = await axios.get(`${BaseUrl}/facebook-connection`, {
         params: {
-          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          user_id: JSON.parse(user || '{}')?.user_id,
           facebook_fanpage_id: page.id,
         },
       });
@@ -109,7 +111,7 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
           access_token: [longLivedPageToken],
           status: 'connected',
           last_sync: new Date().toISOString(),
-          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          user_id: JSON.parse(user || '{}')?.user_id,
           facebook_fanpage_id: page.id,
         });
       } else {
@@ -129,13 +131,13 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
               status: 'connected',
               permissions: REQUIRED_PERMISSIONS,
               last_sync: null,
-              user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+              user_id: JSON.parse(user || '{}')?.user_id,
               facebook_fanpage_id: page.id,
-              role_id: '3914421c-647d-44ba-ae18-1487065d99e2',
+              role_id: '1',
               page_url: page.page_url,
               page_avatar_url: page.avatar_url,
-              follower_count: page.follower_count,
-              fan_count: page.fan_count,
+              follower_count: page.follower_count || 0,
+              fan_count: page.fan_count || 0,
               page_type: page.page_type,
             }),
           ]
@@ -153,7 +155,7 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
             .category,
           status: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
             .isPublished,
-          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          user_id: JSON.parse(user || '{}')?.user_id,
           facebook_fanpage_id: page.id,
         });
       }

@@ -210,6 +210,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
 }
 
 function ResourcePage() {
+  const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,63 +218,67 @@ function ResourcePage() {
   const [showAddPage, setShowAddPage] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
+  const [stats, setStats] = useState<StatCard[]>([]);
 
-  // Stats for the dashboard based on date range
-  const getStats = (range: DateRange): StatCard[] => {
-    // In a real app, these values would be calculated based on the date range
-    const multiplier = range === '7' ? 0.7 : range === '90' ? 1.3 : 1;
-
-    return [
-      {
-        title: 'Facebook Pages',
-        value: '3',
-        icon: Facebook,
-        change: { value: '+1', positive: true },
-        color: 'blue',
-      },
-      {
-        title: 'Người Theo Dõi',
-        value: Math.round(411 * multiplier),
-        icon: Users,
-        change: { value: '+5.2%', positive: true },
-        total: '1.2M',
-        color: 'green',
-      },
-      {
-        title: 'Lượt Tương Tác',
-        value: Math.round(124 * multiplier),
-        icon: MessageCircleHeart,
-        change: { value: '+12.3%', positive: true },
-        color: 'red',
-      },
-      {
-        title: 'Lượt Tiếp Cận',
-        value: Math.round(3452 * multiplier).toLocaleString(),
-        icon: Eye,
-        change: { value: '+8.1%', positive: true },
-        color: 'green',
-      },
-      {
-        title: 'Tỷ Lệ Phản Hồi',
-        value: '92.5%',
-        icon: MessageSquare,
-        change: { value: '-2.4%', positive: false },
-        color: 'yellow',
-      },
-      {
-        title: 'Tổng Số Bài Đăng',
-        value: Math.round(85 * multiplier),
-        icon: FileText,
-        change: { value: '+15.2%', positive: true },
-        color: 'purple',
-      },
-    ];
+  const getStats = async () => {
+    try {
+      const multiplier = 1;
+      const response = await axios.post(`${BaseUrl}/resources`, {
+        user_id: JSON.parse(user || '{}')?.user_id,
+      });
+      setStats([
+        {
+          title: 'Facebook Pages',
+          value: '3',
+          icon: Facebook,
+          change: { value: '+1', positive: true },
+          color: 'blue',
+        },
+        {
+          title: 'Người Theo Dõi',
+          value: Math.round(411 * multiplier),
+          icon: Users,
+          change: { value: '+5.2%', positive: true },
+          total: '1.2M',
+          color: 'green',
+        },
+        {
+          title: 'Lượt Tương Tác',
+          value: Math.round(124 * multiplier),
+          icon: MessageCircleHeart,
+          change: { value: '+12.3%', positive: true },
+          color: 'red',
+        },
+        {
+          title: 'Lượt Tiếp Cận',
+          value: Math.round(3452 * multiplier).toLocaleString(),
+          icon: Eye,
+          change: { value: '+8.1%', positive: true },
+          color: 'green',
+        },
+        // {
+        //   title: 'Tỷ Lệ Phản Hồi',
+        //   value: '92.5%',
+        //   icon: MessageSquare,
+        //   change: { value: '-2.4%', positive: false },
+        //   color: 'yellow',
+        // },
+        {
+          title: 'Tổng Số Bài Đăng',
+          value: Math.round(85 * multiplier),
+          icon: FileText,
+          change: { value: '+15.2%', positive: true },
+          color: 'purple',
+        },
+      ]);
+    } catch (error) {
+      console.error('Error fetching pages:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch pages');
+    }
   };
 
-  const [stats, setStats] = useState<StatCard[]>(getStats('30'));
-
   useEffect(() => {
-    setStats(getStats(dateRange));
+    getStats();
   }, [dateRange]);
 
   useEffect(() => {
@@ -287,7 +292,7 @@ function ResourcePage() {
 
       const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
         params: {
-          user_id: '3f6760c5-e518-4fbb-8683-1ea2b9cd6d35',
+          user_id: JSON.parse(user || '{}')?.user_id,
         },
       });
 

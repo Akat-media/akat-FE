@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, AlertCircle } from 'lucide-react';
-import { toast } from "react-toastify";
+import { toast } from 'react-toastify';
 import { useAuthStore } from '../store/authStore.ts';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext.tsx';
-
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,13 +14,13 @@ function LoginPage() {
   const navigate = useNavigate();
   // const signIn = useAuthStore((state) => state.signIn);
   const location = useLocation();
-  const toastShownRef = useRef(false) // Flag để tránh gọi 2 lần
+  const toastShownRef = useRef(false); // Flag để tránh gọi 2 lần
   const [showPassword, setShowPassword] = useState(false);
   const togglePassword = () => {
     setShowPassword((prev) => !prev);
-  }
+  };
   const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
-  const {login} = useAuth();
+  const { login } = useAuth();
 
   useEffect(() => {
     if (location.state?.showSuccess && !toastShownRef.current) {
@@ -41,31 +40,31 @@ function LoginPage() {
     }
   }, [location, navigate]);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const payload = {
       email: email,
       password: password,
-    }
+    };
 
     try {
       // await signIn(email, password);
 
-      axios.post(`${VITE_BASE_URL}/login`, payload)
-        .then(response => {
+      axios
+        .post(`${VITE_BASE_URL}/login`, payload)
+        .then((response) => {
           // console.log("response:" + JSON.stringify(response.data.data.access_token));
-          login(response.data.data.user.email,response.data.data.access_token);
+          login(response.data.data);
           navigate('/', {
             state: { showSuccess: true },
           });
         })
-        .catch(error => {
-          if(error.response && error.response.data) {
+        .catch((error) => {
+          if (error.response && error.response.data) {
             toast.error(error.response.data.message);
           }
-        })
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
