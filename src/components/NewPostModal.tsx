@@ -99,7 +99,7 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Bạn đang nghĩ gì?"
-                className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
+                className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-gray-900 placeholder-gray-500 text-lg"
               />
             </div>
 
