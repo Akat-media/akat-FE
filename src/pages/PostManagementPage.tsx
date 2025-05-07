@@ -13,21 +13,25 @@ import {
   // MessageSquare,
   // Heart,
   // Share2,
+  Settings,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
 const PageSelector = lazy(() => import('../components/PageSelector'));
+import { create } from 'domain';
+import ContentModeration from '../components/content-management/post-managenment/ContentModeration.tsx';
 
 function PostManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
+  const [showContentModeration, setShowContentModeration] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'content' | 'schedule'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'schedule' | 'utilities'>('content');
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 3;
   const navigate = useNavigate();
@@ -275,6 +279,7 @@ function PostManagementPage() {
               <FileText className="w-4 h-4" />
               Nội dung
             </button>
+
             <button
               className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
                 activeTab === 'schedule'
@@ -285,6 +290,18 @@ function PostManagementPage() {
             >
               <Calendar className="w-4 h-4" />
               Lịch đăng
+            </button>
+
+            <button
+              className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+                activeTab === 'utilities'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              onClick={() => setActiveTab('utilities')}
+            >
+              <Settings className="w-4 h-4" />
+              Tiện ích
             </button>
           </div>
 
@@ -339,10 +356,55 @@ function PostManagementPage() {
                 </div>
               )}
             </>
-          ) : (
+          ) : activeTab === 'schedule' ? (
             <Suspense fallback={<div>Loading...</div>}>
               <PostSchedule />
             </Suspense>
+          ) : (
+            <>
+              <div className="p-6 bg-white">
+                <h2 className="text-lg font-semibold mb-6">Tiện ích tự động hóa</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-3 bg-purple-50 rounded-xl">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-shield w-6 h-6 text-purple-600"
+                        >
+                          <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium">Kiểm duyệt nội dung</h3>
+                    </div>
+                    <p className="text-gray-600 mb-6">
+                      Tự động kiểm duyệt nội dung bài viết và bình luận bằng AI. Phát hiện và xử lý
+                      các vi phạm tiêu chuẩn cộng đồng.
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Đang hoạt động</span>
+                      </div>
+                      <button
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        onClick={() => setShowContentModeration(true)}
+                      >
+                        Cấu hình
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -423,7 +485,7 @@ function PostManagementPage() {
           </nav>
         )}
 
-        {/* Modal */}
+        {/* Modal them bai viet moi*/}
         {showPageSelector && (
           <Suspense fallback={<div>Loading...</div>}>
             <PageSelector
@@ -447,6 +509,11 @@ function PostManagementPage() {
               }}
             />
           </Suspense>
+        )}
+
+        {/* Modal tien ich: kiem duyet noi dung */}
+        {showContentModeration && (
+          <ContentModeration onClose={() => setShowContentModeration(false)} />
         )}
       </div>
     </div>
