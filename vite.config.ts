@@ -17,6 +17,6 @@ export default defineConfig({
   //   port: 3000,
   // },
   server: {
-    allowedHosts: ['a05c-42-117-48-32.ngrok-free.app'],
+    allowedHosts: ['subcommittee-teeth-excitement-prevent.trycloudflare.com'],
   },
 });
