@@ -17,6 +17,9 @@ export default defineConfig({
   //   port: 3000,
   // },
   server: {
-    allowedHosts: ['subcommittee-teeth-excitement-prevent.trycloudflare.com'],
+    allowedHosts: [
+      'subcommittee-teeth-excitement-prevent.trycloudflare.com',
+      'experts-trader-void-workflow.trycloudflare.com',
+    ],
   },
 });
