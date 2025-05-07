@@ -86,8 +86,8 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
                     className="bg-transparent border-none p-0 pr-6 text-gray-600 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors font-medium"
                   >
                     <option value="public">Công khai</option>
-                    <option value="friends">Bạn bè</option>
-                    <option value="only_me">Chỉ mình tôi</option>
+                    {/* <option value="friends">Bạn bè</option>
+                    <option value="only_me">Chỉ mình tôi</option> */}
                   </select>
                 </div>
               </div>

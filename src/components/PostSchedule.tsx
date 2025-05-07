@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Calendar,
   Clock,
@@ -18,6 +18,7 @@ import {
   MapPin,
   Tag,
   Users,
+  Search,
 } from 'lucide-react';
 import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
@@ -45,33 +46,93 @@ function PostSchedule() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Example data - in real app this would come from API
-  const scheduledPosts: ScheduledPost[] = [
-    {
-      id: '1',
-      content: 'Mẫu váy mới về, chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
-      scheduledTime: new Date().toISOString(), // Today
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+  const scheduledPosts: ScheduledPost[] = useMemo(
+    () => [
+      {
+        id: '1',
+        content: 'Mẫu váy mới về, chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
+        scheduledTime: new Date().toISOString(), // Today
+        page: {
+          name: 'Thỏ Store',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'pending',
       },
-      status: 'pending',
-    },
-    {
-      id: '2',
-      content: 'Săn sale cuối tuần - Giảm giá sốc toàn bộ sản phẩm',
-      scheduledTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Tomorrow
-      page: {
-        name: 'Fashion Shop',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+      {
+        id: '2',
+        content: 'Săn sale cuối tuần - Giảm giá sốc toàn bộ sản phẩm',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Tomorrow
+        page: {
+          name: 'Fashion Shop',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
       },
-      status: 'published',
-    },
-  ];
+      {
+        id: '3',
+        content: 'Test',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
+        page: {
+          name: 'Fashion Shop',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
+      },
+      {
+        id: '4',
+        content: 'Siêu phẩm giảm giá 50%',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
+        page: {
+          name: 'Thỏ Store',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
+      },
+      {
+        id: '5',
+        content: 'Exclusive sale - Giảm giá 30% cho đơn hàng đầu tiên',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString(),
+        page: {
+          name: 'Fashion Shop',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
+      },
+      {
+        id: '6',
+        content: 'Madness',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 8)).toISOString(),
+        page: {
+          name: 'Fashion Shop',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
+      },
+      {
+        id: '7',
+        content: 'Cứu',
+        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 9)).toISOString(),
+        page: {
+          name: 'Fashion Shop',
+          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
+        },
+        status: 'published',
+      },
+    ],
+    []
+  );
+
+  const filteredPosts = useMemo(
+    () =>
+      scheduledPosts.filter((post) =>
+        post.content.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [scheduledPosts, searchQuery]
+  );
 
   const daysInWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-  // const today = new Date();
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -109,23 +170,35 @@ function PostSchedule() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-md">
       <div className="p-4 border-b border-gray-100">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <h2 className="text-lg font-semibold">Lịch đăng bài</h2>
-          <button
-            onClick={() => setShowPageSelector(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-sm hover:shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Lên lịch mới</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm bài viết..."
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => setShowPageSelector(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-sm hover:shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Lên lịch mới</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-7 lg:divide-x">
+      <div className="grid grid-cols-1 lg:grid-cols-7 lg:divide-x min-h-[500px]">
         {/* Calendar */}
-        <div className="col-span-5 p-4">
+        <div className="col-span-5 p-4 min-h-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium">
               {selectedDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}
@@ -167,7 +240,9 @@ function PostSchedule() {
                   }`}
                 >
                   <div
-                    className={`text-sm font-medium mb-2 flex items-center justify-between ${isToday(date) ? 'text-blue-600' : ''}`}
+                    className={`text-sm font-medium mb-2 flex items-center justify-between ${
+                      isToday(date) ? 'text-blue-600' : ''
+                    }`}
                   >
                     <span>{date.getDate()}</span>
                     {isToday(date) && (
@@ -203,10 +278,10 @@ function PostSchedule() {
         </div>
 
         {/* Upcoming posts */}
-        <div className="col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100">
-          <h3 className="font-medium mb-4">Sắp đăng</h3>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {scheduledPosts.map((post) => (
+        <div className="col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100 min-h-full">
+          <h3 className="font-medium mb-4">Bài đăng sắp tới</h3>
+          <div className="space-y-3 max-h-[618px] overflow-y-auto">
+            {filteredPosts.map((post) => (
               <div
                 key={post.id}
                 className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
@@ -284,8 +359,8 @@ function PostSchedule() {
                       <Globe className="w-4 h-4" />
                       <select className="bg-transparent border-none p-0 pr-6 text-gray-600 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors font-medium">
                         <option>Công khai</option>
-                        <option>Bạn bè</option>
-                        <option>Chỉ mình tôi</option>
+                        {/* <option>Bạn bè</option>
+                        <option>Chỉ mình tôi</option> */}
                       </select>
                     </div>
                   </div>

@@ -222,58 +222,53 @@ function ResourcePage() {
 
   const getStats = async () => {
     try {
-      const multiplier = 1;
       const response = await axios.post(`${BaseUrl}/resources`, {
         user_id: JSON.parse(user || '{}')?.user_id,
       });
+
+      const data = response.data.data;
+
       setStats([
         {
-          title: 'Facebook Pages',
-          value: '3',
+          title: 'Facebook Pages Đã Kết Nối',
+          value: data.fanpage_count,
           icon: Facebook,
-          change: { value: '+1', positive: true },
+          // change: { value: '+1', positive: true },
           color: 'blue',
         },
         {
-          title: 'Người Theo Dõi',
-          value: Math.round(411 * multiplier),
+          title: 'Tổng Số Người Theo Dõi',
+          value: data.follower_count.toLocaleString(),
           icon: Users,
-          change: { value: '+5.2%', positive: true },
-          total: '1.2M',
+          // change: { value: '+5.2%', positive: true },
+          total: data.fan_count.toLocaleString(),
           color: 'green',
         },
         {
-          title: 'Lượt Tương Tác',
-          value: Math.round(124 * multiplier),
+          title: 'Tổng Lượt Tương Tác',
+          value: data.interactions,
           icon: MessageCircleHeart,
-          change: { value: '+12.3%', positive: true },
+          // change: { value: '+12.3%', positive: true },
           color: 'red',
         },
         {
-          title: 'Lượt Tiếp Cận',
-          value: Math.round(3452 * multiplier).toLocaleString(),
+          title: 'Tổng Lượt Tiếp Cận',
+          value: data.approach.toLocaleString(),
           icon: Eye,
-          change: { value: '+8.1%', positive: true },
-          color: 'green',
+          // change: { value: '+8.1%', positive: true },
+          color: 'yellow',
         },
-        // {
-        //   title: 'Tỷ Lệ Phản Hồi',
-        //   value: '92.5%',
-        //   icon: MessageSquare,
-        //   change: { value: '-2.4%', positive: false },
-        //   color: 'yellow',
-        // },
         {
           title: 'Tổng Số Bài Đăng',
-          value: Math.round(85 * multiplier),
+          value: data.posts,
           icon: FileText,
-          change: { value: '+15.2%', positive: true },
+          // change: { value: '+15.2%', positive: true },
           color: 'purple',
         },
       ]);
     } catch (error) {
-      console.error('Error fetching pages:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch pages');
+      console.error('Error fetching stats:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch stats');
     }
   };
 
@@ -317,6 +312,7 @@ function ResourcePage() {
         })) || [];
 
       setPages(transformedPages);
+      getStats();
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
@@ -379,7 +375,7 @@ function ResourcePage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
           <h2 className="text-lg font-semibold">Facebook Pages đã kết nối</h2>
           <div className="flex gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-initial">
+            <div className="relative w-full sm:w-72">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 size={20}
