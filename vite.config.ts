@@ -17,6 +17,10 @@ export default defineConfig({
   //   port: 3000,
   // },
   server: {
-    allowedHosts: ['brand-yearly-points-avoiding.trycloudflare.com'],
+    allowedHosts: [
+      'subcommittee-teeth-excitement-prevent.trycloudflare.com',
+      'experts-trader-void-workflow.trycloudflare.com',
+      'brand-yearly-points-avoiding.trycloudflare.com',
+    ],
   },
 });

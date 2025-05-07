@@ -12,7 +12,12 @@ import {
 import axios from 'axios';
 import { BaseUrl } from '../constants';
 import FacebookGraphAdapter from '../constants/FacebookGraphAdapter';
-
+import { parseISO } from 'date-fns';
+function normalizePostedAt(dateStr: string): Date {
+  // Thêm dấu ":" vào múi giờ nếu thiếu (ví dụ: +0000 → +00:00)
+  const fixed = dateStr.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+  return parseISO(fixed);
+}
 interface FacebookConnectProps {
   onConnect: () => void;
 }
@@ -62,24 +67,42 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
     page_id: string
   ): Promise<number> => {
     let totalCount = 0;
-    // Graph API endpoint với tham số since và until (timestamp theo giây)
-    let url = `https://graph.facebook.com/v22.0/${page_id}/posts?since=${since}&until=${until}&limit=25&access_token=${token}`;
-    while (url) {
-      const response = await axios.get(url);
-      const data = response.data;
-      // console.log('data' + data);
-      if (data.error) {
-        throw new Error(data.error.message);
+    let url = `https://graph.facebook.com/v22.0/${page_id}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0),full_picture,status_type&since=${since}&until=${until}&limit=10&access_token=${token}`;
+    try {
+      while (url) {
+        const response = await axios.get(url);
+        const data = response.data;
+        if (data.error) throw new Error(data.error.message);
+        if (Array.isArray(data.data)) {
+          const result = data.data.map((item: any) => ({
+            id: item.id,
+            content: item?.message || ' ',
+            facebook_fanpage_id: page_id,
+            posted_at: normalizePostedAt(item?.created_time),
+            likes: item?.likes?.summary?.total_count || 0,
+            comments: item?.comments?.summary?.total_count || 0,
+            shares: item?.shares?.count || 0,
+            status: item?.status_type || '',
+            post_avatar_url: item?.full_picture || '',
+            schedule: false,
+          }));
+          console.log(result);
+          try {
+            await axios.post(`${BaseUrl}/facebook-post`, result);
+          } catch (err: any) {
+            console.error('Failed to post to server:', err.message);
+          }
+          totalCount += data.data.length;
+        }
+        url = data.paging?.next || '';
       }
-      if (data.data && Array.isArray(data.data)) {
-        totalCount += data.data.length;
-      }
-      // Nếu có phân trang, chuyển sang trang tiếp theo, nếu không dừng vòng lặp.
-      url = data.paging && data.paging.next ? data.paging.next : '';
+    } catch (error: any) {
+      console.error('Error during Facebook post fetch:', error.message);
+      throw error;
     }
-
     return totalCount;
   };
+
   const connectFacebookPageV2 = async (page: any) => {
     const today = Math.floor(Date.now() / 1000);
     const since = today - 28 * 24 * 60 * 60;
