@@ -1,35 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import {
   Search,
-  Filter,
   Plus,
   Calendar,
-  ChevronDown,
   Loader2,
-  CheckCircle,
-  XCircle,
-  Eye,
-  MessageSquare,
-  Heart,
-  Share2,
   FileText,
+  // CheckCircle,
+  // ChevronDown,
+  // Filter,
+  // XCircle,
+  // Eye,
+  // MessageSquare,
+  // Heart,
+  // Share2,
 } from 'lucide-react';
-import PostSchedule from '../components/PostSchedule';
-import NewPostModal from '../components/NewPostModal';
-import PageSelector from '../components/PageSelector';
-import { create } from 'domain';
+import { useNavigate } from 'react-router-dom';
+
+const PostSchedule = lazy(() => import('../components/PostSchedule'));
+const NewPostModal = lazy(() => import('../components/NewPostModal'));
+const PageSelector = lazy(() => import('../components/PageSelector'));
 
 function PostManagementPage() {
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
-  const [dateRange, setDateRange] = useState<'7' | '30' | '60'>('30');
-  const [filterStatus] = useState<'all' | 'approved' | 'violated'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule'>('content');
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 3;
+  const navigate = useNavigate();
 
   const posts = [
     {
@@ -208,33 +209,49 @@ function PostManagementPage() {
     },
   ];
 
+  const filteredPosts = useMemo(
+    () => posts.filter((post) => post.content.toLowerCase().includes(searchQuery.toLowerCase())),
+    [posts, searchQuery]
+  );
+
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(posts.length / postsPerPage);
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+
+  // const handlePostClick = (post: any) => {
+  //   setSelectedPage(post);
+  //   setShowPostModal(true);
+  //   window.history.pushState({}, '', `/moderation/post/${post.id}`);
+  // };
+
+  // const closeModal = () => {
+  //   setShowPostModal(false);
+  //   setSelectedPage(null);
+  //   window.history.pushState({}, '', '/moderation/posts');
+  // };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setShowPostModal(false);
+      setSelectedPage(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   return (
     <div className="px-6 py-4">
       <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold mb-2">Quản lý bài đăng</h1>
             <p className="text-gray-600">Quản lý và kiểm duyệt nội dung bài đăng</p>
           </div>
           <div className="sm:ml-auto flex flex-col sm:flex-row gap-3">
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as '7' | '30' | '60')}
-              className="bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm appearance-none bg-no-repeat bg-right pr-8"
-              style={{
-                backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>')`,
-                backgroundPosition: 'calc(100% - 0.75rem) center',
-                backgroundSize: '1rem',
-              }}
-            >
-              <option value="7">7 ngày qua</option>
-              <option value="30">30 ngày qua</option>
-              <option value="60">60 ngày qua</option>
-            </select>
             <button
               onClick={() => setShowPageSelector(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -270,9 +287,10 @@ function PostManagementPage() {
               Lịch đăng
             </button>
           </div>
+
           {activeTab === 'content' ? (
             <>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 p-4">
                 <div className="relative flex-grow">
                   <Search
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -286,99 +304,31 @@ function PostManagementPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="flex gap-3">
-                  <div className="relative">
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg">
-                      <Filter size={18} />
-                      <span>
-                        {filterStatus === 'all'
-                          ? 'Tất cả'
-                          : filterStatus === 'approved'
-                            ? 'Đã duyệt'
-                            : 'Vi phạm'}
-                      </span>
-                      <ChevronDown size={16} />
-                    </button>
-                  </div>
-                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg">
-                    <Calendar size={18} />
-                    <span>Lọc theo ngày</span>
-                  </button>
-                </div>
               </div>
 
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
-              ) : posts.length > 0 ? (
+              ) : currentPosts.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {currentPosts.map((post) => (
-                    <div key={post.id} className="p-4">
+                    <div
+                      key={post.id}
+                      className="p-4 cursor-pointer hover:bg-gray-50"
+                      onClick={() => navigate(`/moderation/post/${post.id}`)}
+                    >
                       <div className="flex items-start gap-4">
                         <img
                           src={post.page.avatar}
                           alt={post.page.name}
                           className="w-12 h-12 rounded-lg object-cover"
+                          loading="lazy"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{post.page.name}</h3>
-                            <span className="text-gray-500">•</span>
-                            <span className="text-sm text-gray-500">
-                              {new Date(post.created_at).toLocaleString()}
-                            </span>
-                            {post.status === 'approved' ? (
-                              <span className="flex items-center gap-1 text-green-600 text-sm">
-                                <CheckCircle className="w-4 h-4" />
-                                Đã duyệt
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 text-red-600 text-sm">
-                                <XCircle className="w-4 h-4" />
-                                Vi phạm
-                              </span>
-                            )}
-                          </div>
-                          {/* <p className="text-gray-800 mb-3">{post.content}</p> */}
-                          {post.isFacebook ? (
-                            <div
-                              className="mb-3"
-                              dangerouslySetInnerHTML={{
-                                __html: `<iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fpermalink.php%3Fstory_fbid%3Dpfbid0SjauP5yhMf4S1xCrFTRhnv1ZFQrYH2pdB4YYyB9Twx5aSH7qrsmaRwhZz8yP9a6cl%26id%3D61571645674323&show_text=true&width=500" width="500" height="571" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`,
-                              }}
-                            />
-                          ) : (
-                            <p className="text-gray-800 mb-3">{post.content}</p>
-                          )}
-
-                          {post.status === 'violated' && post.violation && (
-                            <div className="mb-3 p-3 bg-red-50 rounded-lg">
-                              <div className="flex items-center gap-2 text-red-700 mb-1">
-                                <XCircle className="w-4 h-4" />
-                                <span className="font-medium">{post.violation.type}</span>
-                              </div>
-                              <p className="text-sm text-red-600">{post.violation.reason}</p>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Heart className="w-4 h-4" />
-                              <span className="text-sm">{post.metrics.likes}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <MessageSquare className="w-4 h-4" />
-                              <span className="text-sm">{post.metrics.comments}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Share2 className="w-4 h-4" />
-                              <span className="text-sm">{post.metrics.shares}</span>
-                            </div>
-                          </div>
+                          <h3 className="font-medium">{post.page.name}</h3>
+                          <p className="text-gray-800 mb-3">{post.content}</p>
                         </div>
-                        <button className="p-2 text-gray-400 hover:text-gray-600">
-                          <Eye className="w-5 h-5" />
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -390,9 +340,12 @@ function PostManagementPage() {
               )}
             </>
           ) : (
-            <PostSchedule />
+            <Suspense fallback={<div>Loading...</div>}>
+              <PostSchedule />
+            </Suspense>
           )}
         </div>
+
         {/* Phân trang */}
         {activeTab === 'content' && (
           <nav aria-label="Page navigation example" className="flex justify-center mt-4">
@@ -472,24 +425,28 @@ function PostManagementPage() {
 
         {/* Modal */}
         {showPageSelector && (
-          <PageSelector
-            onPageSelect={(page) => {
-              setSelectedPage(page);
-              setShowPageSelector(false);
-              setShowPostModal(true);
-            }}
-            onClose={() => setShowPageSelector(false)}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <PageSelector
+              onPageSelect={(page) => {
+                setSelectedPage(page);
+                setShowPageSelector(false);
+                setShowPostModal(true);
+              }}
+              onClose={() => setShowPageSelector(false)}
+            />
+          </Suspense>
         )}
 
         {showPostModal && selectedPage && (
-          <NewPostModal
-            page={selectedPage}
-            onClose={() => {
-              setShowPostModal(false);
-              setSelectedPage(null);
-            }}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <NewPostModal
+              page={selectedPage}
+              onClose={() => {
+                setShowPostModal(false);
+                setSelectedPage(null);
+              }}
+            />
+          </Suspense>
         )}
       </div>
     </div>
