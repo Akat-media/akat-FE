@@ -72,11 +72,13 @@ function PostManagementPage() {
 
   const filteredPosts = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return posts.filter(
-      (post) =>
-        (post.content || '').toLowerCase().includes(query) ||
-        (post.page_name || '').toLowerCase().includes(query)
-    );
+    return posts
+      .filter(
+        (post) =>
+          (post.content || '').toLowerCase().includes(query) ||
+          (post.page_name || '').toLowerCase().includes(query)
+      )
+      .sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());
   }, [posts, searchQuery]);
 
   const indexOfLastPost = currentPage * postsPerPage;
@@ -198,23 +200,25 @@ function PostManagementPage() {
                             <h3 className="font-medium text-gray-900 truncate">
                               {post.page_name || 'Tên Fanpage'}
                             </h3>
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-clock w-3 h-3"
-                              >
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                              </svg>
-                              <span>{new Date(post.created_time).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="lucide lucide-clock w-3 h-3"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                <span>{new Date(post.posted_at).toLocaleString()}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
