@@ -16,6 +16,8 @@ import {
   Settings,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
@@ -27,194 +29,57 @@ function PostManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
   const [showContentModeration, setShowContentModeration] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule' | 'utilities'>('content');
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 3;
+  const postsPerPage = 10;
   const navigate = useNavigate();
 
-  const posts = [
-    {
-      id: 1,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Mẫu váy mới về, chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-      isFacebook: true,
-    },
-    {
-      id: 2,
-      page: {
-        name: 'Fashion Shop',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Săn sale cuối tuần - Giảm giá sốc toàn bộ sản phẩm',
-      status: 'violated',
-      violation: {
-        type: 'Spam',
-        reason: 'Nội dung quảng cáo lặp lại nhiều lần',
-      },
-      metrics: {
-        likes: 123,
-        comments: 34,
-        shares: 5,
-      },
-      created_at: '2024-03-22T14:20:00Z',
-      isFacebook: false,
-      facebookUrl:
-        'https://www.facebook.com/permalink.php?story_fbid=pfbid02V4MEHxRRXt25dQPDViRJ4AG9vZYonC87Q1AXmVK11Rs5G2U8R1jPuzybHYvdZVi1l&id=61571645674323',
-    },
-    {
-      id: 3,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Test nội dung bài viết',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 4,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content:
-        'Còn gái ơi, đừng bỏ lỡ mẫu váy mới về nhé! Chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 5,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Ra mắt bộ sưu tập mới - Giảm giá 20% cho đơn hàng đầu tiên',
-      status: 'violated',
-      violation: {
-        type: 'Spam',
-        reason: 'Nội dung quảng cáo quá vip, đối thủ bán k lại',
-      },
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 6,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Siêu phẩm mới về - Chất liệu cotton 100%, giá chỉ 499k. Inbox để được tư vấn ngay!',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 7,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Cú sốc đầu tuần - Giảm giá 50% cho đơn hàng đầu tiên',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 8,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content: 'Chúng tôi đã có mặt tại đây - Giảm giá 30% cho đơn hàng đầu tiên',
-      status: 'approved',
-      metrics: {
-        likes: 245,
-        comments: 56,
-        shares: 12,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 9,
-      page: {
-        name: 'Fashion Shop',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content:
-        'Siêu phẩm vừa hạ cánh - Chất liệu cotton 100%, giá chỉ 399k. Inbox để được tư vấn ngay!',
-      status: 'violated',
-      violation: {
-        type: 'Spam',
-        reason: 'Sản phẩm mới quá vip, đối thủ lùa không kịp',
-      },
-      metrics: {
-        likes: 369,
-        comments: 86,
-        shares: 102,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-    },
-    {
-      id: 10,
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      content:
-        'Đẹp vl mở bát cho mùa hè cháy khét lẹt 2025, duy nhất 30 slot giá 199k. Sau đó sẽ về lại giá 399k, anh chị em tranh thủ nhé!!!',
-      status: 'violated',
-      violation: {
-        type: 'Bán láo',
-        reason: 'Giá ảo, có dấu hiệu lừa đảo người tiêu dùng',
-      },
-      metrics: {
-        like: 357,
-        comments: 86,
-        shares: 98,
-      },
-      created_at: '2024-03-22T15:30:00Z',
-      isFacebook: false,
-    },
-  ];
+  const fetchPostsFromConnectedPages = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const pageResponse = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+        params: {
+          user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+        },
+      });
+
+      const pages = pageResponse.data.data || [];
+      const fanpageIds = pages.map((page: any) => page.facebook_fanpage_id);
+
+      if (fanpageIds.length === 0) {
+        setPosts([]);
+        return;
+      }
+
+      const postResponse = await axios.post(`${BaseUrl}/facebook-post-list`, {
+        facebook_fanpage_id: fanpageIds,
+      });
+      console.log('Post response data:', postResponse.data);
+      setPosts(postResponse.data.data?.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách bài viết:', err);
+      setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPostsFromConnectedPages();
+  }, []);
 
   const filteredPosts = useMemo(
-    () => posts.filter((post) => post.content.toLowerCase().includes(searchQuery.toLowerCase())),
+    () =>
+      posts.filter((post) =>
+        (post.content || '').toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [posts, searchQuery]
   );
 
@@ -222,29 +87,6 @@ function PostManagementPage() {
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
   const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-
-  // const handlePostClick = (post: any) => {
-  //   setSelectedPage(post);
-  //   setShowPostModal(true);
-  //   window.history.pushState({}, '', `/moderation/post/${post.id}`);
-  // };
-
-  // const closeModal = () => {
-  //   setShowPostModal(false);
-  //   setSelectedPage(null);
-  //   window.history.pushState({}, '', '/moderation/posts');
-  // };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setShowPostModal(false);
-      setSelectedPage(null);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
 
   return (
     <div className="px-6 py-4">
@@ -327,6 +169,10 @@ function PostManagementPage() {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-500">{error}</p>
+                </div>
               ) : currentPosts.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {currentPosts.map((post) => (
@@ -337,14 +183,28 @@ function PostManagementPage() {
                     >
                       <div className="flex items-start gap-4">
                         <img
-                          src={post.page.avatar}
-                          alt={post.page.name}
+                          src={post.post_avatar_url || 'fallback-avatar.jpg'}
                           className="w-12 h-12 rounded-lg object-cover"
                           loading="lazy"
                         />
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium">{post.page.name}</h3>
-                          <p className="text-gray-800 mb-3">{post.content}</p>
+                          <h3 className="font-medium">{post.page?.name || '???'}</h3>
+                          <p className="text-gray-800 mb-3">
+                            {post.content || '[Không có nội dung]'}
+                          </p>
+                          {post.image_url && (
+                            <img
+                              src={post.image_url}
+                              alt="Post"
+                              className="w-full h-auto rounded-lg mb-3"
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="flex items-center gap-4 text-gray-600 text-sm">
+                            <span className="text-blue-500">{post.likes || 0} lượt thích</span>
+                            <span className="text-green-500">{post.comments || 0} bình luận</span>
+                            <span className="text-orange-500">{post.shares || 0} lượt chia sẻ</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -519,4 +379,5 @@ function PostManagementPage() {
     </div>
   );
 }
+
 export default PostManagementPage;

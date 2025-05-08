@@ -183,17 +183,6 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
               <div className="text-xs text-gray-500">tiếp cận</div>
             </div>
           </div>
-
-          {/* <div className="flex items-center gap-2">
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <MessageSquare className="w-5 h-5 text-orange-500" />
-            </div>
-            <div>
-              <div className="font-medium">{page.metrics.responseRate.toFixed(1)}%</div>
-              <div className="text-xs text-gray-500">phản hồi</div>
-            </div>
-          </div> */}
-
           <div className="flex items-center gap-2">
             <div className="p-2 bg-red-50 rounded-lg">
               <FileText className="w-5 h-5 text-purple-500" />
@@ -219,50 +208,47 @@ function ResourcePage() {
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
   const [stats, setStats] = useState<StatCard[]>([]);
+  const [pageIds, setPageIds] = useState<string[]>([]);
 
-  const getStats = async () => {
+  const getStats = async (ids = pageIds) => {
     try {
       const response = await axios.post(`${BaseUrl}/resources`, {
         user_id: JSON.parse(user || '{}')?.user_id,
+        facebook_fanpage_id: ids,
       });
 
       const data = response.data.data;
 
       setStats([
         {
-          title: 'Facebook Pages Đã Kết Nối',
+          title: 'Fanpages Đã Kết Nối',
           value: data.fanpage_count,
           icon: Facebook,
-          // change: { value: '+1', positive: true },
           color: 'blue',
         },
         {
           title: 'Tổng Số Người Theo Dõi',
           value: data.follower_count.toLocaleString(),
           icon: Users,
-          // change: { value: '+5.2%', positive: true },
           total: data.fan_count.toLocaleString(),
           color: 'green',
         },
         {
           title: 'Tổng Lượt Tương Tác',
-          value: data.interactions,
+          value: data.interactions.toLocaleString(),
           icon: MessageCircleHeart,
-          // change: { value: '+12.3%', positive: true },
           color: 'red',
         },
         {
           title: 'Tổng Lượt Tiếp Cận',
           value: data.approach.toLocaleString(),
           icon: Eye,
-          // change: { value: '+8.1%', positive: true },
           color: 'yellow',
         },
         {
           title: 'Tổng Số Bài Đăng',
           value: data.posts,
           icon: FileText,
-          // change: { value: '+15.2%', positive: true },
           color: 'purple',
         },
       ]);
@@ -273,8 +259,10 @@ function ResourcePage() {
   };
 
   useEffect(() => {
-    getStats();
-  }, [dateRange]);
+    if (pageIds.length > 0) {
+      getStats(pageIds);
+    }
+  }, [pageIds]);
 
   useEffect(() => {
     fetchPages();
@@ -295,7 +283,7 @@ function ResourcePage() {
 
       const transformedPages: FacebookPage[] =
         connections?.map((conn: any) => ({
-          id: conn.id,
+          id: conn.facebook_fanpage_id,
           name: conn.name || 'Unnamed Page',
           verified: true,
           category: conn.category || 'Unknown',
@@ -312,7 +300,9 @@ function ResourcePage() {
         })) || [];
 
       setPages(transformedPages);
-      getStats();
+
+      const ids = transformedPages.map((page) => page.id);
+      setPageIds(ids);
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
