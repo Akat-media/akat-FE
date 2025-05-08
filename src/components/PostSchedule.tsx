@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -19,9 +19,13 @@ import {
   Tag,
   Users,
   Search,
+  XCircle,
+  PanelRightClose,
 } from 'lucide-react';
 import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
 interface Page {
   id: string;
@@ -42,12 +46,14 @@ interface ScheduledPost {
 
 function PostSchedule() {
   const [showNewPost, setShowNewPost] = useState(false);
+  const [showPostRelease, setShowPostRelease] = useState(true);
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
-  const [selectedPage, setSelectedPage] = useState<Page | null>(null);
+  const [selectedPage, setSelectedPage] = useState<any>(null);
+  const [dataListPage, setDataListPage] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState('');
-
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const scheduledPosts: ScheduledPost[] = useMemo(
     () => [
       {
@@ -123,7 +129,30 @@ function PostSchedule() {
     ],
     []
   );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fetchPostsFromConnectedPages = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const pageResponse = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+        params: {
+          user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+        },
+      });
+
+      setDataListPage(pageResponse.data.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách bài viết:', err);
+      setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchPostsFromConnectedPages();
+  }, []);
   const filteredPosts = useMemo(
     () =>
       scheduledPosts.filter((post) =>
@@ -156,10 +185,27 @@ function PostSchedule() {
     return days;
   };
 
-  const changeMonth = (delta: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setMonth(newDate.getMonth() + delta);
-    setSelectedDate(newDate);
+  const changeMonthPrev = (delta: number) => {
+    if (viewMode === 'week') {
+      const newDate = new Date(selectedDate);
+      newDate.setDate(newDate.getDate() - 7);
+      setSelectedDate(newDate);
+    } else {
+      const newDate = new Date(selectedDate);
+      newDate.setMonth(newDate.getMonth() + delta);
+      setSelectedDate(newDate);
+    }
+  };
+  const changeMonthNext = (delta: number) => {
+    if (viewMode === 'week') {
+      const newDate = new Date(selectedDate);
+      newDate.setDate(newDate.getDate() + 7);
+      setSelectedDate(newDate);
+    } else {
+      const newDate = new Date(selectedDate);
+      newDate.setMonth(newDate.getMonth() + delta);
+      setSelectedDate(newDate);
+    }
   };
 
   const getPostsForDate = (date: Date) => {
@@ -168,6 +214,221 @@ function PostSchedule() {
       return postDate.toDateString() === date.toDateString();
     });
   };
+  const RenderMonth = () => {
+    const formattedDate = selectedDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
+    const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    return capitalizedDate;
+  };
+  const getWeekDays = (date: Date) => {
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  };
+  const getPostsForDay = (date: Date) => {
+    return scheduledPosts.filter((post) => {
+      const postDate = new Date(post.scheduledTime);
+      return postDate.toDateString() === date.toDateString();
+    });
+  };
+  const renderWeek = () => {
+    const days = getWeekDays(selectedDate);
+    return (
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {days.map((day, index) => (
+          <div key={index} className="text-center">
+            <div className="text-sm font-medium text-gray-500">
+              {day.toLocaleDateString('vi-VN', { weekday: 'short' })}
+            </div>
+            <div
+              className={`text-lg font-semibold ${
+                day.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-gray-900'
+              }`}
+            >
+              {day.getDate()}
+            </div>
+          </div>
+        ))}
+        {getWeekDays(selectedDate).map((day, index) => (
+          <div key={index} className="border border-gray-200 rounded-lg p-2 min-h-[200px]">
+            {getPostsForDay(day).map((post) => (
+              <div
+                key={post.id}
+                className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div
+                  className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                >
+                  {post.page.avatar && (
+                    <img
+                      src={post.page.avatar}
+                      alt="Post thumbnail"
+                      className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-xs font-medium text-gray-500">
+                        {formatTime(new Date(post.scheduledTime))}
+                      </span>
+                      {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
+                      {post.status === 'published' && (
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                      )}
+                      {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                    </div>
+                    <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+  const renderMonth = () => {
+    const days = getDaysInMonth(selectedDate);
+    return (
+      <div className="grid grid-cols-7 gap-1">
+        {daysInWeek.map((day) => (
+          <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
+            {day}
+          </div>
+        ))}
+        {days.map((date, index) => {
+          if (!date) {
+            return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
+          }
+
+          const posts = getPostsForDate(date);
+
+          return (
+            <div
+              key={date.getTime()}
+              className={`p-2 min-h-[100px] rounded-lg transition-all ${
+                isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+              }`}
+            >
+              <div
+                className={`text-sm font-medium mb-2 flex items-center justify-between ${
+                  isToday(date) ? 'text-blue-600' : ''
+                }`}
+              >
+                <span>{date.getDate()}</span>
+                {isToday(date) && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                    Hôm nay
+                  </span>
+                )}
+              </div>
+              <div className="space-y-1">
+                {posts.map((post) => (
+                  <button
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
+                      post.status === 'published'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : post.status === 'failed'
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span className="truncate flex-1">
+                      {format(parseISO(post.scheduledTime), 'HH:mm')} - {post.page.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+  const [images, setImages] = useState<any>([]);
+  const [files, setFiles] = useState<any>([]);
+  const [postDate, setPostDate] = useState('');
+  const [postTime, setPostTime] = useState('');
+  const [content, setContent] = useState('');
+
+  const handleImageChange = (e: any) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map((file: any) => URL.createObjectURL(file));
+    setImages((prev: any) => [...prev, ...newImages]);
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setFiles((prev: any) => [...prev, ...files]);
+    }
+  };
+  function createFormData(data: any) {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === 'string' || value instanceof Blob) {
+        formData.append(key, value);
+      }
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          for (let i = 0; i < value.length; i++) {
+            formData.append('files', value[i]);
+          }
+        }
+      }
+    }
+    return formData;
+  }
+  const handleCreateAndSchedulePost = async () => {
+    try {
+      const combinedDateTime = new Date(`${postDate}T${postTime}:00`);
+      console.log(files);
+      console.log('combinedDateTime', combinedDateTime.toISOString());
+      const body: any = createFormData({
+        files,
+        content: content,
+        likes: '0',
+        comments: '0',
+        shares: '0',
+        status: 'pending',
+        access_token: selectedPage?.access_token[0] || '',
+        posted_at: combinedDateTime.toISOString(),
+        scheduledTime: combinedDateTime.toISOString(),
+        facebook_fanpage_id: selectedPage?.facebook_fanpage_id,
+      });
+      for (const [key, value] of body.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+      const res = await axios.post(`${BaseUrl}/facebook-schedule`, body, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setImages([]);
+      setFiles([]);
+      setPostDate('');
+      setPostTime('');
+      setContent('');
+      setShowNewPost(false);
+    } catch (error) {
+      setImages([]);
+      setFiles([]);
+      setPostDate('');
+      setPostTime('');
+      setContent('');
+      setShowNewPost(false);
+      console.error('Lỗi khi tải danh sách bài viết:', error);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-md">
@@ -175,6 +436,24 @@ function PostSchedule() {
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <h2 className="text-lg font-semibold">Lịch đăng bài</h2>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-white border rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-3 py-1 rounded-md ${
+                  viewMode === 'week' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
+                }`}
+              >
+                Tuần
+              </button>
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-1 rounded-md ${
+                  viewMode === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
+                }`}
+              >
+                Tháng
+              </button>
+            </div>
             <div className="relative">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -198,87 +477,37 @@ function PostSchedule() {
 
       <div className="grid grid-cols-1 lg:grid-cols-7 lg:divide-x min-h-[500px]">
         {/* Calendar */}
-        <div className="col-span-5 p-4 min-h-full">
+        <div className={`${showPostRelease ? 'col-span-5' : 'col-span-7'}  p-4 min-h-full`}>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-medium">
-              {selectedDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}
-            </h3>
+            <h3 className="text-lg font-medium">{RenderMonth()}</h3>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => changeMonth(-1)}
+                onClick={() => changeMonthPrev(-1)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => changeMonth(1)}
+                onClick={() => changeMonthNext(1)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
+              <button
+                onClick={() => setShowPostRelease((prev) => !prev)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <PanelRightClose className="w-5 h-5" />
+              </button>
             </div>
           </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {daysInWeek.map((day) => (
-              <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
-                {day}
-              </div>
-            ))}
-            {getDaysInMonth(selectedDate).map((date, index) => {
-              if (!date) {
-                return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
-              }
-
-              const posts = getPostsForDate(date);
-
-              return (
-                <div
-                  key={date.getTime()}
-                  className={`p-2 min-h-[100px] rounded-lg transition-all ${
-                    isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div
-                    className={`text-sm font-medium mb-2 flex items-center justify-between ${
-                      isToday(date) ? 'text-blue-600' : ''
-                    }`}
-                  >
-                    <span>{date.getDate()}</span>
-                    {isToday(date) && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                        Hôm nay
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    {posts.map((post) => (
-                      <button
-                        key={post.id}
-                        onClick={() => setSelectedPost(post)}
-                        className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                          post.status === 'published'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : post.status === 'failed'
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                      >
-                        <Clock className="w-3 h-3" />
-                        <span className="truncate flex-1">
-                          {format(parseISO(post.scheduledTime), 'HH:mm')} - {post.page.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {viewMode == 'week' ? renderWeek() : renderMonth()}
         </div>
 
         {/* Upcoming posts */}
-        <div className="col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100 min-h-full">
+        <div
+          className={`${showPostRelease ? '' : 'hidden'} col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100 min-h-full`}
+        >
           <h3 className="font-medium mb-4">Bài đăng sắp tới</h3>
           <div className="space-y-3 max-h-[618px] overflow-y-auto">
             {filteredPosts.map((post) => (
@@ -290,7 +519,7 @@ function PostSchedule() {
                   <img
                     src={post.page.avatar}
                     alt={post.page.name}
-                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-white"
+                    className="w-20 h-20 rounded-xl object-cover ring-2 ring-white"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
@@ -322,6 +551,7 @@ function PostSchedule() {
             setShowPageSelector(false);
             setShowNewPost(true);
           }}
+          data={dataListPage}
           onClose={() => setShowPageSelector(false)}
         />
       )}
@@ -369,18 +599,43 @@ function PostSchedule() {
                 {/* Content Input */}
                 <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
                   <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
                     placeholder="Bạn đang nghĩ gì?"
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
+                  {images.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {images.map((img: any, index: any) => (
+                        <img
+                          key={index}
+                          src={img}
+                          alt={`upload-${index}`}
+                          className="w-32 h-32 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {/* Media Attachments */}
                 <div className="flex flex-wrap items-center gap-3 p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
                   <span className="font-medium text-gray-900">Thêm vào bài viết</span>
                   <div className="flex-1 flex flex-wrap items-center gap-2">
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      id="imageUpload"
+                      onChange={handleImageChange}
+                    />
+                    <label
+                      htmlFor="imageUpload"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors cursor-pointer"
+                    >
                       <Image className="w-5 h-5" />
                       <span className="text-sm">Ảnh</span>
-                    </button>
+                    </label>
                     <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
                       <Video className="w-5 h-5" />
                       <span className="text-sm">Video</span>
@@ -419,6 +674,8 @@ function PostSchedule() {
                         type="date"
                         className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                         min={new Date().toISOString().split('T')[0]}
+                        value={postDate}
+                        onChange={(e) => setPostDate(e.target.value)}
                       />
                     </div>
                     <div>
@@ -426,6 +683,8 @@ function PostSchedule() {
                         Giờ đăng
                       </label>
                       <input
+                        value={postTime}
+                        onChange={(e) => setPostTime(e.target.value)}
                         type="time"
                         className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                       />
@@ -444,7 +703,10 @@ function PostSchedule() {
               >
                 Hủy
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button
+                onClick={handleCreateAndSchedulePost}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
                 Lên lịch
               </button>
             </div>

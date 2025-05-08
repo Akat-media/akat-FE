@@ -11,25 +11,10 @@ interface Page {
 interface PageSelectorProps {
   onPageSelect: (page: Page) => void;
   onClose: () => void;
+  data?: any;
 }
 
-function PageSelector({ onPageSelect, onClose }: PageSelectorProps) {
-  // Example pages data - in real app this would come from API
-  const pages: Page[] = [
-    {
-      id: '1',
-      name: 'Thỏ Store',
-      avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      followerCount: 12500,
-    },
-    {
-      id: '2',
-      name: 'Fashion Shop',
-      avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      followerCount: 8300,
-    },
-  ];
-
+function PageSelector({ onPageSelect, onClose, data }: PageSelectorProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
@@ -53,15 +38,15 @@ function PageSelector({ onPageSelect, onClose }: PageSelectorProps) {
 
           {/* Pages List */}
           <div className="space-y-3">
-            {pages.map((page) => (
+            {data.map((page: any) => (
               <button
                 key={page.id}
                 onClick={() => onPageSelect(page)}
                 className="w-full flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors text-left"
               >
-                {page.avatar ? (
+                {page.image_url ? (
                   <img
-                    src={page.avatar}
+                    src={page.image_url}
                     alt={page.name}
                     className="w-12 h-12 rounded-lg object-cover"
                   />
@@ -72,9 +57,9 @@ function PageSelector({ onPageSelect, onClose }: PageSelectorProps) {
                 )}
                 <div>
                   <h3 className="font-medium">{page.name}</h3>
-                  {page.followerCount && (
+                  {page.follows && (
                     <p className="text-sm text-gray-600">
-                      {page.followerCount.toLocaleString()} người theo dõi
+                      {page.follows.toLocaleString()} người theo dõi
                     </p>
                   )}
                 </div>

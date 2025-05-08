@@ -64,7 +64,8 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
     since: number,
     until: number,
     token: string,
-    page_id: string
+    page_id: string,
+    page_name: any
   ): Promise<number> => {
     let totalCount = 0;
     let url = `https://graph.facebook.com/v22.0/${page_id}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0),full_picture,status_type&since=${since}&until=${until}&limit=10&access_token=${token}`;
@@ -85,6 +86,7 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
             status: item?.status_type || '',
             post_avatar_url: item?.full_picture || '',
             schedule: false,
+            page_name: page_name || ' ',
           }));
           console.log(result);
           try {
@@ -126,7 +128,13 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
           facebook_fanpage_id: page.id,
         },
       });
-      const postsCount = await fetchPostsCount(since, today, longLivedPageToken, page.id);
+      const postsCount = await fetchPostsCount(
+        since,
+        today,
+        longLivedPageToken,
+        page.id,
+        page.name
+      );
       console.log('postsCount', postsCount);
       if (existingConnection.data.length > 0) {
         console.log(1);
@@ -180,6 +188,7 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
             .isPublished,
           user_id: JSON.parse(user || '{}')?.user_id,
           facebook_fanpage_id: page.id,
+          access_token: [longLivedPageToken],
         });
       }
     } catch (error) {
