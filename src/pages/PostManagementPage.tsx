@@ -34,6 +34,10 @@ function PostManagementPage() {
   const postsPerPage = 9;
   const navigate = useNavigate();
 
+  const [selectedFanpage, setSelectedFanpage] = useState<any>(null);
+  const [showFanpageDropdown, setShowFanpageDropdown] = useState(false);
+  const [fanpages, setFanpages] = useState<any[]>([]);
+
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -66,6 +70,23 @@ function PostManagementPage() {
     }
   };
 
+  // Fetch danh sách fanpage khi component được mount
+  useEffect(() => {
+    const fetchFanpages = async () => {
+      try {
+        const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+          params: {
+            user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+          },
+        });
+        setFanpages(response.data.data || []);
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách fanpage:', err);
+      }
+    };
+    fetchFanpages();
+  }, []);
+
   useEffect(() => {
     fetchPostsFromConnectedPages();
   }, []);
@@ -75,11 +96,12 @@ function PostManagementPage() {
     return posts
       .filter(
         (post) =>
-          (post.content || '').toLowerCase().includes(query) ||
-          (post.page_name || '').toLowerCase().includes(query)
+          (!selectedFanpage || post.page_id === selectedFanpage.id) && // Lọc theo fanpage
+          ((post.content || '').toLowerCase().includes(query) ||
+            (post.page_name || '').toLowerCase().includes(query))
       )
       .sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());
-  }, [posts, searchQuery]);
+  }, [posts, searchQuery, selectedFanpage]);
 
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
@@ -138,48 +160,85 @@ function PostManagementPage() {
 
           {activeTab === 'content' ? (
             <>
-              <div className="flex flex-col sm:flex-row gap-4 p-4">
-                <div className="relative flex-grow">
-                  <Search
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={20}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm bài viết..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4">
+                <div className="col-span-1 sm:col-span-1">
+                  <div className="relative w-full">
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      size={20}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm bài viết..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg">
-                    <Filter size={18} />
-                    <span>
-                      {filterStatus === 'all'
-                        ? 'Tất cả'
-                        : filterStatus === 'approved'
-                          ? 'Đã duyệt'
-                          : 'Vi phạm'}
-                    </span>
-                    <ChevronDown size={16} />
+                <div className="col-span-1 sm:col-span-1 relative">
+                  <button
+                    onClick={() => setShowFanpageDropdown((prev) => !prev)}
+                    className="flex items-center justify-between w-full px-4 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2 max-w-[180px]">
+                      <Filter size={18} />
+                      <span
+                        className="text-ellipsis overflow-hidden whitespace-nowrap block"
+                        title={selectedFanpage?.name}
+                      >
+                        {selectedFanpage ? selectedFanpage.name : 'Chọn fanpage'}
+                      </span>
+                    </div>
+                    <ChevronDown size={18} />
+                  </button>
+                  {showFanpageDropdown && (
+                    <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto right-0">
+                      <ul>
+                        <li
+                          onClick={() => {
+                            setSelectedFanpage(null);
+                            setShowFanpageDropdown(false);
+                          }}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        >
+                          Tất Cả
+                        </li>
+                        {fanpages.map((fanpage) => (
+                          <li
+                            key={fanpage.id}
+                            onClick={() => {
+                              setSelectedFanpage(fanpage);
+                              setShowFanpageDropdown(false);
+                            }}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                            title={fanpage.name}
+                          >
+                            {fanpage.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-1 sm:col-span-1 flex sm:justify-end">
+                  <button
+                    onClick={() => setShowPageSelector(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Bài viết mới</span>
                   </button>
                 </div>
-                <button
-                  onClick={() => setShowPageSelector(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Bài viết mới</span>
-                </button>
               </div>
+
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
               ) : error ? (
-                <div className="text-center py-12">
-                  <p className="text-red-500">{error}</p>
+                <div className="flex flex-col justify-center items-center text-center min-h-[60vh]">
+                  <p className="text-red-500 text-lg height-100">{error}</p>
                 </div>
               ) : currentPosts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
@@ -441,18 +500,6 @@ function PostManagementPage() {
           </Suspense>
         )}
 
-        {showPostModal && selectedPage && (
-          <Suspense fallback={<div>Loading...</div>}>
-            <NewPostModal
-              page={selectedPage}
-              onClose={() => {
-                setShowPostModal(false);
-                setSelectedPage(null);
-              }}
-            />
-          </Suspense>
-        )}
-
         {/* Modal tien ich: kiem duyet noi dung */}
         {showContentModeration && (
           <ContentModeration onClose={() => setShowContentModeration(false)} />
@@ -461,5 +508,4 @@ function PostManagementPage() {
     </div>
   );
 }
-
 export default PostManagementPage;
