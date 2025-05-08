@@ -18,6 +18,7 @@ import {
   MapPin,
   Tag,
   Users,
+  XCircle,
 } from 'lucide-react';
 import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
@@ -29,14 +30,12 @@ interface Page {
 }
 
 interface ScheduledPost {
-  id: string;
+  id: number;
   content: string;
   scheduledTime: string;
-  page: {
-    name: string;
-    avatar?: string;
-  };
-  status: 'pending' | 'published' | 'failed';
+  status: 'scheduled' | 'published' | 'failed';
+  platform: 'facebook' | 'instagram' | 'twitter';
+  image?: string;
 }
 
 function PostSchedule() {
@@ -45,28 +44,39 @@ function PostSchedule() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
 
   // Example data - in real app this would come from API
   const scheduledPosts: ScheduledPost[] = [
     {
-      id: '1',
-      content: 'Mẫu váy mới về, chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
-      scheduledTime: new Date().toISOString(), // Today
-      page: {
-        name: 'Thỏ Store',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
-      status: 'pending',
+      id: 1,
+      content: 'Chương trình khuyến mãi tháng 4 - Giảm giá 50% cho tất cả sản phẩm',
+      scheduledTime: '2024-04-01T09:00:00',
+      status: 'scheduled',
+      platform: 'facebook',
+      image: 'https://images.pexels.com/photos/6214476/pexels-photo-6214476.jpeg',
     },
     {
-      id: '2',
-      content: 'Săn sale cuối tuần - Giảm giá sốc toàn bộ sản phẩm',
-      scheduledTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Tomorrow
-      page: {
-        name: 'Fashion Shop',
-        avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-      },
+      id: 2,
+      content: 'Bộ sưu tập mùa hè 2024 đã có mặt tại cửa hàng',
+      scheduledTime: '2024-04-02T14:30:00',
+      status: 'scheduled',
+      platform: 'instagram',
+      image: 'https://images.pexels.com/photos/5709661/pexels-photo-5709661.jpeg',
+    },
+    {
+      id: 3,
+      content: 'Bài viết đã đăng tuần trước',
+      scheduledTime: '2024-03-25T10:00:00',
       status: 'published',
+      platform: 'facebook',
+    },
+    {
+      id: 4,
+      content: 'Bài viết bị lỗi đăng',
+      scheduledTime: '2024-03-26T15:00:00',
+      status: 'failed',
+      platform: 'twitter',
     },
   ];
 
@@ -108,135 +118,198 @@ function PostSchedule() {
     });
   };
 
+  const getWeekDays = (date: Date) => {
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getPostsForDay = (date: Date) => {
+    return scheduledPosts.filter((post) => {
+      const postDate = new Date(post.scheduledTime);
+      return postDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const renderWeekView = () => {
+    const days = getWeekDays(selectedDate);
+
+    return (
+      <div className="flex flex-col h-full">
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {days.map((day, index) => (
+            <div key={index} className="text-center">
+              <div className="text-sm font-medium text-gray-500">
+                {day.toLocaleDateString('vi-VN', { weekday: 'short' })}
+              </div>
+              <div
+                className={`text-lg font-semibold ${
+                  day.toDateString() === new Date().toDateString()
+                    ? 'text-blue-600'
+                    : 'text-gray-900'
+                }`}
+              >
+                {day.getDate()}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 grid grid-cols-7 gap-2">
+          {days.map((day, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-2 min-h-[200px]">
+              {getPostsForDay(day).map((post) => (
+                <div
+                  key={post.id}
+                  className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start gap-2">
+                    {post.image && (
+                      <img
+                        src={post.image}
+                        alt="Post thumbnail"
+                        className="w-12 h-12 rounded object-cover"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-xs font-medium text-gray-500">
+                          {formatTime(new Date(post.scheduledTime))}
+                        </span>
+                        {post.status === 'scheduled' && <Clock className="w-3 h-3 text-blue-500" />}
+                        {post.status === 'published' && (
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                        )}
+                        {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                      </div>
+                      <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const days = getDaysInMonth(selectedDate);
+
+    return (
+      <div className="grid grid-cols-7 gap-2">
+        {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day) => (
+          <div key={day} className="text-center font-medium text-gray-500">
+            {day}
+          </div>
+        ))}
+
+        {days.map((day, index) => (
+          <div
+            key={index}
+            className={`border border-gray-200 rounded-lg p-2 min-h-[100px] ${
+              !day ? 'bg-gray-50' : ''
+            }`}
+          >
+            {day && (
+              <>
+                <div
+                  className={`text-sm font-medium ${
+                    day.toDateString() === new Date().toDateString()
+                      ? 'text-blue-600'
+                      : 'text-gray-900'
+                  }`}
+                >
+                  {day.getDate()}
+                </div>
+                {getPostsForDay(day).map((post) => (
+                  <div key={post.id} className="mt-1 p-1 bg-white border rounded text-xs truncate">
+                    {formatTime(new Date(post.scheduledTime))} - {post.content}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-          <h2 className="text-lg font-semibold">Lịch đăng bài</h2>
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const newDate = new Date(selectedDate);
+                newDate.setDate(newDate.getDate() - 7);
+                setSelectedDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                const newDate = new Date(selectedDate);
+                newDate.setDate(newDate.getDate() + 7);
+                setSelectedDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+          <h2 className="text-xl font-semibold">
+            {selectedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-white border rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1 rounded-md ${
+                viewMode === 'week' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
+              }`}
+            >
+              Tuần
+            </button>
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1 rounded-md ${
+                viewMode === 'month' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
+              }`}
+            >
+              Tháng
+            </button>
+          </div>
+
           <button
-            onClick={() => setShowPageSelector(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-sm hover:shadow-md"
+            onClick={() => setShowNewPost(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            <span>Lên lịch mới</span>
+            <span>Lên lịch bài viết</span>
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-7 lg:divide-x">
-        {/* Calendar */}
-        <div className="col-span-5 p-4">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-medium">
-              {selectedDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}
-            </h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => changeMonth(-1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => changeMonth(1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {daysInWeek.map((day) => (
-              <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
-                {day}
-              </div>
-            ))}
-            {getDaysInMonth(selectedDate).map((date, index) => {
-              if (!date) {
-                return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
-              }
-
-              const posts = getPostsForDate(date);
-
-              return (
-                <div
-                  key={date.getTime()}
-                  className={`p-2 min-h-[100px] rounded-lg transition-all ${
-                    isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div
-                    className={`text-sm font-medium mb-2 flex items-center justify-between ${isToday(date) ? 'text-blue-600' : ''}`}
-                  >
-                    <span>{date.getDate()}</span>
-                    {isToday(date) && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                        Hôm nay
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    {posts.map((post) => (
-                      <button
-                        key={post.id}
-                        onClick={() => setSelectedPost(post)}
-                        className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                          post.status === 'published'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : post.status === 'failed'
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                      >
-                        <Clock className="w-3 h-3" />
-                        <span className="truncate flex-1">
-                          {format(parseISO(post.scheduledTime), 'HH:mm')} - {post.page.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Upcoming posts */}
-        <div className="col-span-2 p-4 bg-gradient-to-br from-gray-50 to-gray-100">
-          <h3 className="font-medium mb-4">Sắp đăng</h3>
-          <div className="space-y-3">
-            {scheduledPosts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                <div className="flex items-start gap-3">
-                  <img
-                    src={post.page.avatar}
-                    alt={post.page.name}
-                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-white"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-sm">{post.page.name}</h4>
-                      <div className="relative">
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 line-clamp-2">{post.content}</p>
-                    <div className="flex items-center gap-2 mt-3 text-xs font-medium text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span>{new Date(post.scheduledTime).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="flex-1 overflow-auto">
+        {viewMode === 'week' ? renderWeekView() : renderMonthView()}
       </div>
 
       {/* Page Selector Modal */}
@@ -253,126 +326,76 @@ function PostSchedule() {
 
       {/* New Post Modal */}
       {showNewPost && selectedPage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Lên lịch đăng bài</h2>
-                <button
-                  onClick={() => setShowNewPost(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="space-y-4">
-                {/* Page Selection */}
-                <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl relative">
-                  <img
-                    src={
-                      selectedPage.avatar ||
-                      'https://images.unsplash.com/photo-1441986300917-64674bd600d8'
-                    }
-                    alt={selectedPage.name}
-                    className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow-md"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{selectedPage.name}</h3>
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Globe className="w-4 h-4" />
-                      <select className="bg-transparent border-none p-0 pr-6 text-gray-600 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors font-medium">
-                        <option>Công khai</option>
-                        <option>Bạn bè</option>
-                        <option>Chỉ mình tôi</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content Input */}
-                <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
-                  <textarea
-                    placeholder="Bạn đang nghĩ gì?"
-                    className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
-                  />
-                </div>
-
-                {/* Media Attachments */}
-                <div className="flex flex-wrap items-center gap-3 p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
-                  <span className="font-medium text-gray-900">Thêm vào bài viết</span>
-                  <div className="flex-1 flex flex-wrap items-center gap-2">
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors">
-                      <Image className="w-5 h-5" />
-                      <span className="text-sm">Ảnh</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
-                      <Video className="w-5 h-5" />
-                      <span className="text-sm">Video</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">
-                      <Camera className="w-5 h-5" />
-                      <span className="text-sm">Story</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors">
-                      <MapPin className="w-5 h-5" />
-                      <span className="text-sm">Check in</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
-                      <Tag className="w-5 h-5" />
-                      <span className="text-sm">Gắn thẻ</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">
-                      <Users className="w-5 h-5" />
-                      <span className="text-sm">Cảm xúc</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Schedule Settings */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5">
-                  <h4 className="font-medium mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <span>Cài đặt thời gian</span>
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Ngày đăng
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Giờ đăng
-                      </label>
-                      <input
-                        type="time"
-                        className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">Lên lịch bài viết mới</h2>
               <button
                 onClick={() => {
                   setShowNewPost(false);
                   setSelectedPage(null);
                 }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg"
               >
-                Hủy
+                <X className="w-5 h-5" />
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Lên lịch
-              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={selectedPage.avatar || 'https://via.placeholder.com/128'}
+                  alt={selectedPage.name}
+                  className="w-12 h-12 rounded-xl object-cover ring-2 ring-white shadow-md"
+                />
+                <div>
+                  <h2 className="font-semibold">{selectedPage.name}</h2>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date().toLocaleDateString('vi-VN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung</label>
+                <textarea
+                  className="w-full h-32 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập nội dung bài viết..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thời gian đăng
+                </label>
+                <input
+                  type="datetime-local"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowNewPost(false);
+                    setSelectedPage(null);
+                  }}
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => {
+                    // Handle post creation
+                    setShowNewPost(false);
+                    setSelectedPage(null);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Lên lịch
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -386,12 +409,12 @@ function PostSchedule() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src={selectedPost.page.avatar}
-                    alt={selectedPost.page.name}
+                    src={selectedPost.image || 'https://via.placeholder.com/128'}
+                    alt={selectedPost.content}
                     className="w-12 h-12 rounded-xl object-cover ring-2 ring-white shadow-md"
                   />
                   <div>
-                    <h2 className="font-semibold">{selectedPost.page.name}</h2>
+                    <h2 className="font-semibold">{selectedPost.content}</h2>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Calendar className="w-4 h-4" />
                       <span>{new Date(selectedPost.scheduledTime).toLocaleString()}</span>

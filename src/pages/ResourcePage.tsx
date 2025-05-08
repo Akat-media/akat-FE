@@ -16,6 +16,14 @@ import {
   Calendar,
   Heart,
   MessageCircleHeart,
+  Instagram,
+  DollarSign,
+  Filter,
+  ChevronDown,
+  MoreVertical,
+  XCircle,
+  Receipt,
+  CreditCard,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -46,6 +54,30 @@ interface FacebookPage {
   };
   status: 'active' | 'inactive';
   avatar?: string;
+}
+
+interface Account {
+  id: number;
+  name: string;
+  status: 'connected' | 'disconnected' | 'error';
+  type: 'instagram' | 'ad';
+  lastSync: string;
+  metrics?: {
+    followers?: number;
+    posts?: number;
+    spend?: number;
+  };
+}
+
+interface Invoice {
+  id: number;
+  invoiceNumber: string;
+  date: string;
+  dueDate: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'overdue';
+  paymentMethod: string;
+  campaignName: string;
 }
 
 type DateRange = '7' | '30' | '90';
@@ -208,6 +240,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
 }
 
 function ResourcePage() {
+  const [activeTab, setActiveTab] = useState<'facebook' | 'instagram' | 'ads'>('facebook');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -215,6 +248,11 @@ function ResourcePage() {
   const [showAddPage, setShowAddPage] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'connected' | 'disconnected' | 'error'>(
+    'all'
+  );
+  const [activeSubTab, setActiveSubTab] = useState<'accounts' | 'billing'>('accounts');
 
   // Stats for the dashboard based on date range
   const getStats = (range: DateRange): StatCard[] => {
@@ -350,105 +388,494 @@ function ResourcePage() {
       page.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Example data for Instagram and Ad Accounts
+  const accounts: Account[] = [
+    {
+      id: 1,
+      name: 'Instagram Business',
+      status: 'connected',
+      type: 'instagram',
+      lastSync: '2024-04-15T09:15:00',
+      metrics: {
+        followers: 5678,
+        posts: 89,
+      },
+    },
+    {
+      id: 2,
+      name: 'Ad Account 1',
+      status: 'connected',
+      type: 'ad',
+      lastSync: '2024-04-15T11:45:00',
+      metrics: {
+        spend: 5000000,
+      },
+    },
+    {
+      id: 3,
+      name: 'Ad Account 2',
+      status: 'error',
+      type: 'ad',
+      lastSync: '2024-04-14T16:30:00',
+    },
+  ];
+
+  const filteredAccounts = accounts.filter((account) => {
+    const matchesType = account.type === activeTab;
+    const matchesSearch = account.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || account.status === filterStatus;
+    return matchesType && matchesSearch && matchesStatus;
+  });
+
+  const toggleFilterDropdown = () => {
+    setShowFilterDropdown(!showFilterDropdown);
+  };
+
+  const handleFilterSelect = (status: 'all' | 'connected' | 'disconnected' | 'error') => {
+    setFilterStatus(status);
+    setShowFilterDropdown(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return 'bg-green-50 text-green-600';
+      case 'disconnected':
+        return 'bg-gray-100 text-gray-600';
+      case 'error':
+        return 'bg-red-50 text-red-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'disconnected':
+        return <XCircle className="w-4 h-4" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const invoices: Invoice[] = [
+    {
+      id: 1,
+      invoiceNumber: 'INV-2024-001',
+      date: '2024-04-01',
+      dueDate: '2024-04-15',
+      amount: 5000000,
+      status: 'paid',
+      paymentMethod: 'Credit Card',
+      campaignName: 'Chiến dịch tháng 4',
+    },
+    {
+      id: 2,
+      invoiceNumber: 'INV-2024-002',
+      date: '2024-03-15',
+      dueDate: '2024-03-30',
+      amount: 4000000,
+      status: 'pending',
+      paymentMethod: 'Bank Transfer',
+      campaignName: 'Chiến dịch tháng 3',
+    },
+    {
+      id: 3,
+      invoiceNumber: 'INV-2024-003',
+      date: '2024-02-28',
+      dueDate: '2024-03-15',
+      amount: 3000000,
+      status: 'overdue',
+      paymentMethod: 'Credit Card',
+      campaignName: 'Chiến dịch tháng 2',
+    },
+  ];
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Quản lý tài nguyên</h1>
-            <p className="text-gray-600">
-              Tổng quan về hiệu suất và quản lý các trang Facebook đã kết nối
-            </p>
-          </div>
-          <div className="sm:ml-auto">
-            <div className="flex items-center gap-2 bg-white rounded-lg border p-2">
-              <Calendar className="w-5 h-5 text-gray-500" />
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value as DateRange)}
-                className="text-sm border-0 focus:ring-0 w-full bg-transparent"
-              >
-                <option value="7">7 ngày gần nhất</option>
-                <option value="30">30 ngày gần nhất</option>
-                <option value="90">90 ngày gần nhất</option>
-              </select>
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Quản lý tài nguyên</h1>
+          <p className="text-gray-600">Kết nối và quản lý các tài khoản mạng xã hội</p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertCircle className="w-5 h-5" />
-              <p className="font-medium">{error}</p>
-            </div>
-          </div>
-        )}
+        <div className="sm:ml-auto">
+          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" />
+            <span>Thêm tài khoản mới</span>
+          </button>
+        </div>
       </div>
 
-      {/* Stats Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat, index) => (
-          <StatCard key={index} {...stat} />
-        ))}
-      </div>
-
-      {/* Facebook Pages Section */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
-          <h2 className="text-lg font-semibold">Facebook Pages đã kết nối</h2>
-          <div className="flex gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-initial">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Tìm kiếm trang..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
-              />
-            </div>
-            <button
-              onClick={() => setShowExport(true)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              <span>Xuất</span>
-            </button>
-            <button
-              onClick={() => setShowAddPage(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Thêm Page</span>
-            </button>
-          </div>
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-100">
+          <button
+            className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+              activeTab === 'facebook'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('facebook')}
+          >
+            <Facebook className="w-4 h-4" />
+            Facebook
+          </button>
+          <button
+            className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+              activeTab === 'instagram'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('instagram')}
+          >
+            <Instagram className="w-4 h-4" />
+            Instagram
+          </button>
+          <button
+            className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+              activeTab === 'ads'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('ads')}
+          >
+            <DollarSign className="w-4 h-4" />
+            Tài khoản quảng cáo
+          </button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          </div>
-        ) : filteredPages.length > 0 ? (
-          <div className="space-y-3">
-            {filteredPages.map((page) => (
-              <FacebookPageCard key={page.id} page={page} />
-            ))}
-          </div>
+        {activeTab === 'facebook' ? (
+          <>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 text-red-700">
+                  <AlertCircle className="w-5 h-5" />
+                  <p className="font-medium">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Stats Dashboard */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {stats.map((stat, index) => (
+                <StatCard key={index} {...stat} />
+              ))}
+            </div>
+
+            {/* Facebook Pages Section */}
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
+                <h2 className="text-lg font-semibold">Facebook Pages đã kết nối</h2>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      size={20}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm trang..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowExport(true)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Xuất</span>
+                  </button>
+                  <button
+                    onClick={() => setShowAddPage(true)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Thêm Page</span>
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+              ) : filteredPages.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredPages.map((page) => (
+                    <FacebookPageCard key={page.id} page={page} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <Facebook className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Không tìm thấy trang nào</p>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Facebook className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Không tìm thấy trang nào</p>
-          </div>
+          <>
+            <div className="flex border-b border-gray-100">
+              <button
+                className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+                  activeSubTab === 'accounts'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveSubTab('accounts')}
+              >
+                <Users className="w-4 h-4" />
+                Tài khoản
+              </button>
+              <button
+                className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
+                  activeSubTab === 'billing'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveSubTab('billing')}
+              >
+                <Receipt className="w-4 h-4" />
+                Hóa đơn & Thanh toán
+              </button>
+            </div>
+
+            {activeSubTab === 'accounts' ? (
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-grow">
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      size={20}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm tài khoản..."
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <button
+                      className="flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={toggleFilterDropdown}
+                    >
+                      <Filter size={18} className="text-gray-500" />
+                      <span className="font-medium">
+                        {filterStatus === 'all'
+                          ? 'Tất cả'
+                          : filterStatus === 'connected'
+                            ? 'Đã kết nối'
+                            : filterStatus === 'disconnected'
+                              ? 'Ngắt kết nối'
+                              : 'Lỗi'}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-500 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {showFilterDropdown && (
+                      <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <div className="p-1">
+                          <button
+                            onClick={() => handleFilterSelect('all')}
+                            className={`w-full text-left px-3 py-2 rounded-md ${filterStatus === 'all' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+                          >
+                            Tất cả
+                          </button>
+                          <button
+                            onClick={() => handleFilterSelect('connected')}
+                            className={`w-full text-left px-3 py-2 rounded-md ${filterStatus === 'connected' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+                          >
+                            Đã kết nối
+                          </button>
+                          <button
+                            onClick={() => handleFilterSelect('disconnected')}
+                            className={`w-full text-left px-3 py-2 rounded-md ${filterStatus === 'disconnected' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+                          >
+                            Ngắt kết nối
+                          </button>
+                          <button
+                            onClick={() => handleFilterSelect('error')}
+                            className={`w-full text-left px-3 py-2 rounded-md ${filterStatus === 'error' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+                          >
+                            Lỗi
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {filteredAccounts.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {filteredAccounts.map((account) => (
+                      <div key={account.id} className="p-6 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium">{account.name}</h3>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(account.status)}`}
+                              >
+                                {getStatusIcon(account.status)}
+                                {account.status === 'connected'
+                                  ? 'Đã kết nối'
+                                  : account.status === 'disconnected'
+                                    ? 'Ngắt kết nối'
+                                    : 'Lỗi'}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Cập nhật lần cuối: {new Date(account.lastSync).toLocaleString()}
+                            </div>
+                          </div>
+                          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {account.metrics && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            {account.metrics.followers !== undefined && (
+                              <div>
+                                <p className="text-sm text-gray-600 mb-1">Người theo dõi</p>
+                                <p className="font-medium">
+                                  {account.metrics.followers.toLocaleString()}
+                                </p>
+                              </div>
+                            )}
+                            {account.metrics.posts !== undefined && (
+                              <div>
+                                <p className="text-sm text-gray-600 mb-1">Bài viết</p>
+                                <p className="font-medium">
+                                  {account.metrics.posts.toLocaleString()}
+                                </p>
+                              </div>
+                            )}
+                            {account.metrics.spend !== undefined && (
+                              <div>
+                                <p className="text-sm text-gray-600 mb-1">Chi tiêu</p>
+                                <p className="font-medium">
+                                  {account.metrics.spend.toLocaleString()}đ
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50">
+                    <div className="w-12 h-12 text-gray-300 mx-auto mb-3">
+                      <DollarSign className="w-full h-full" />
+                    </div>
+                    <p className="text-gray-500 font-medium">Không tìm thấy tài khoản nào</p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Thử thay đổi bộ lọc hoặc tìm kiếm với từ khóa khác
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <h2 className="text-lg font-semibold">Hóa đơn & Thanh toán</h2>
+                  <div className="flex gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                      <Download className="w-4 h-4" />
+                      <span>Xuất hóa đơn</span>
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                      <CreditCard className="w-4 h-4" />
+                      <span>Thanh toán</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Mã hóa đơn
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Chiến dịch
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Ngày tạo
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Hạn thanh toán
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Số tiền
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Phương thức
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+                          Trạng thái
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {invoices.map((invoice) => (
+                        <tr key={invoice.id} className="hover:bg-gray-50">
+                          <td className="py-4 px-4">
+                            <span className="font-medium">{invoice.invoiceNumber}</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="text-gray-600">{invoice.campaignName}</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="text-gray-600">
+                              {new Date(invoice.date).toLocaleDateString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="text-gray-600">
+                              {new Date(invoice.dueDate).toLocaleDateString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="font-medium">{invoice.amount.toLocaleString()}đ</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="text-gray-600">{invoice.paymentMethod}</span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(invoice.status)}`}
+                            >
+                              {getStatusIcon(invoice.status)}
+                              {invoice.status === 'paid'
+                                ? 'Đã thanh toán'
+                                : invoice.status === 'pending'
+                                  ? 'Chờ thanh toán'
+                                  : 'Quá hạn'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {/* Modals */}
-      {/* {showAddPage && <AddPageModal onClose={() => setShowAddPage(false)} />}
-      {showExport && <ExportModal onClose={() => setShowExport(false)} />} */}
     </div>
   );
 }

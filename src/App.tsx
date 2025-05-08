@@ -21,6 +21,7 @@ import {
   Sliders,
   ChevronDown,
   FileText,
+  ArrowUpRight,
 } from 'lucide-react';
 import HomePage from './pages/HomePage.tsx';
 import ContentOverviewPage from './pages/ContentOverviewPage.tsx';
@@ -37,6 +38,8 @@ import NotFoundPage from './pages/NotFoundPage.tsx';
 import { useAuthStore } from './store/authStore.ts';
 import ViolationAlert from './components/ViolationAlert.tsx';
 import ConnectPageV2 from './pages/connect-page-v2/index.tsx';
+import UtilityPage from './pages/UtilityPage';
+import AdsManagerPage from './pages/AdsManagerPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
@@ -124,88 +127,6 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               <span>Dashboard</span>
             </Link>
 
-            {/* Automation */}
-            <div className="flex flex-col">
-              <button
-                onClick={() => setAutomationOpen(!automationOpen)}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 group relative"
-              >
-                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 group-hover:bg-blue-100 transition-all duration-200 shadow-sm">
-                  <Bot className="w-5 h-5" style={{ color: '#575757' }} />
-                </div>
-                <span>Automation</span>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform ${automationOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              <div
-                className={`pl-12 space-y-1 overflow-hidden transition-all duration-200 ${
-                  automationOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
-                }`}
-              >
-                <Link
-                  to="/automation"
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-                    isActive('/automation')
-                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                      : 'hover:bg-gray-50'
-                  }`}
-                  onClick={onClose}
-                >
-                  <div
-                    className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
-                      isActive('/automation')
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                  </div>
-                  <span>Tổng quan</span>
-                </Link>
-                <Link
-                  to="/automation/templates"
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-                    isActive('/automation/templates')
-                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                      : 'hover:bg-gray-50'
-                  }`}
-                  onClick={onClose}
-                >
-                  <div
-                    className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
-                      isActive('/automation/templates')
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    <FileCode className="w-4 h-4" />
-                  </div>
-                  <span>Template mẫu</span>
-                </Link>
-                <Link
-                  to="/automation/custom"
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
-                    isActive('/automation/custom')
-                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                      : 'hover:bg-gray-50'
-                  }`}
-                  onClick={onClose}
-                >
-                  <div
-                    className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
-                      isActive('/automation/custom')
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    <Sliders className="w-4 h-4" />
-                  </div>
-                  <span>Tùy chỉnh</span>
-                </Link>
-              </div>
-            </div>
-
             {/* Quản trị nội dung */}
             <Link
               to="/moderation"
@@ -228,14 +149,14 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               >
                 <Shield className="w-5 h-5" />
               </div>
-              <span>Quản trị nội dung</span>
+              <span>Quản lý nội dung</span>
               <ChevronDown
                 className={`w-5 h-5 text-gray-400 transition-transform ${moderationOpen ? 'rotate-180' : ''}`}
               />
             </Link>
             <div
               className={`pl-12 space-y-1 overflow-hidden transition-all duration-200 ${
-                moderationOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                moderationOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
               }`}
             >
               <Link
@@ -278,6 +199,46 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 </div>
                 <span>Quản lý bài đăng</span>
               </Link>
+              <Link
+                to="/moderation/ads"
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
+                  isActive('/moderation/ads')
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'hover:bg-gray-50'
+                }`}
+                onClick={onClose}
+              >
+                <div
+                  className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
+                    isActive('/moderation/ads')
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <span>Ads Manager</span>
+              </Link>
+              <Link
+                to="/moderation/utilities"
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group ${
+                  isActive('/moderation/utilities')
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'hover:bg-gray-50'
+                }`}
+                onClick={onClose}
+              >
+                <div
+                  className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${
+                    isActive('/moderation/utilities')
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <span>Tiện ích tự động</span>
+              </Link>
             </div>
             <Link
               to="/resources"
@@ -297,6 +258,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
               </div>
               <span>Quản lý tài nguyên</span>
             </Link>
+
             <Link
               to="/connection"
               className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group mt-2 ${
@@ -378,8 +340,11 @@ function App() {
                         <Route index element={<Navigate to="/moderation/overview" />} />
                         <Route path="overview" element={<ContentOverviewPage />} />
                         <Route path="posts" element={<PostManagementPage />} />
+                        <Route path="ads" element={<AdsManagerPage />} />
+                        <Route path="utilities" element={<UtilityPage />} />
                       </Route>
                       <Route path="resources" element={<ResourcePage />} />
+                      <Route path="utilities" element={<UtilityPage />} />
                       <Route path="connection" element={<ConnectionPage />} />
                       <Route path="test" element={<ConnectPageV2 />} />
                       <Route path="*" element={<NotFoundPage />} />
@@ -401,8 +366,11 @@ function App() {
             <Route index element={<Navigate to="/moderation/overview" />} />
             <Route path="overview" element={<ContentOverviewPage />} />
             <Route path="posts" element={<PostManagementPage />} />
+            <Route path="ads" element={<AdsManagerPage />} />
+            <Route path="utilities" element={<UtilityPage />} />
           </Route>
           <Route path="resources" element={<ResourcePage />} />
+          <Route path="utilities" element={<UtilityPage />} />
           <Route path="connection" element={<ConnectionPage />} />
           <Route path="test" element={<ConnectPageV2 />} />
         </Route>

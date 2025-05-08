@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   X,
-  Image,
+  Image as ImageIcon,
   Video,
   Bot,
   Globe,
@@ -11,19 +11,20 @@ import {
   Tag,
   Users,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
+import { Post } from '../types/post';
 
 interface NewPostModalProps {
-  page: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
+  isOpen: boolean;
   onClose: () => void;
+  onSave: (post: Post) => void;
 }
 
-function NewPostModal({ page, onClose }: NewPostModalProps) {
+function NewPostModal({ isOpen, onClose, onSave }: NewPostModalProps) {
   const [content, setContent] = useState('');
+  const [media, setMedia] = useState<string[]>([]);
+  const [scheduledTime, setScheduledTime] = useState('');
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
@@ -55,13 +56,36 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
     setShowAiSuggestions(false);
   };
 
+  const handleSubmit = () => {
+    if (content.trim()) {
+      const post: Post = {
+        id: Date.now(),
+        content: content.trim(),
+        media,
+        status: scheduledTime ? 'scheduled' : 'draft',
+        createdAt: new Date().toISOString(),
+        page: {
+          id: '1',
+          name: 'Thỏ Store',
+          avatar: 'https://images.pexels.com/photos/6214476/pexels-photo-6214476.jpeg',
+        },
+      };
+      onSave(post);
+      setContent('');
+      setMedia([]);
+      setScheduledTime('');
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Tạo bài viết mới</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -72,12 +96,12 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             {/* Page Selection */}
             <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
               <img
-                src={page.avatar || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8'}
-                alt={page.name}
+                src="https://images.pexels.com/photos/6214476/pexels-photo-6214476.jpeg"
+                alt="Thỏ Store"
                 className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow-md"
               />
               <div>
-                <h3 className="font-semibold text-gray-900">{page.name}</h3>
+                <h3 className="font-semibold text-gray-900">Thỏ Store</h3>
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Globe className="w-4 h-4" />
                   <select
@@ -155,7 +179,7 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
               <span className="font-medium text-gray-900">Thêm vào bài viết</span>
               <div className="flex-1 flex flex-wrap items-center gap-2">
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors">
-                  <Image className="w-5 h-5" />
+                  <ImageIcon className="w-5 h-5" />
                   <span className="text-sm">Ảnh</span>
                 </button>
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
@@ -223,7 +247,11 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
         </div>
 
         <div className="p-4 border-t border-gray-200">
-          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl">
+          <button
+            onClick={handleSubmit}
+            disabled={!content.trim()}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+          >
             {isScheduled ? 'Lên lịch đăng' : 'Đăng ngay'}
           </button>
         </div>
