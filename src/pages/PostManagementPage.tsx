@@ -5,27 +5,22 @@ import {
   Calendar,
   Loader2,
   FileText,
-  // CheckCircle,
-  // ChevronDown,
-  // Filter,
-  // XCircle,
-  // Eye,
-  // MessageSquare,
-  // Heart,
-  // Share2,
   Settings,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import ContentModeration from '../components/content-management/post-managenment/ContentModeration.tsx';
+import { FaThumbsUp, FaComment, FaShare, FaFacebook } from 'react-icons/fa';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
 const PageSelector = lazy(() => import('../components/PageSelector'));
-import { create } from 'domain';
-import ContentModeration from '../components/content-management/post-managenment/ContentModeration.tsx';
 
 function PostManagementPage() {
+  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'violated'>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -36,7 +31,7 @@ function PostManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule' | 'utilities'>('content');
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 10;
+  const postsPerPage = 9;
   const navigate = useNavigate();
 
   const fetchPostsFromConnectedPages = async () => {
@@ -75,13 +70,14 @@ function PostManagementPage() {
     fetchPostsFromConnectedPages();
   }, []);
 
-  const filteredPosts = useMemo(
-    () =>
-      posts.filter((post) =>
-        (post.content || '').toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    [posts, searchQuery]
-  );
+  const filteredPosts = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return posts.filter(
+      (post) =>
+        (post.content || '').toLowerCase().includes(query) ||
+        (post.page_name || '').toLowerCase().includes(query)
+    );
+  }, [posts, searchQuery]);
 
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
@@ -96,15 +92,6 @@ function PostManagementPage() {
           <div>
             <h1 className="text-2xl font-bold mb-2">Quản lý bài đăng</h1>
             <p className="text-gray-600">Quản lý và kiểm duyệt nội dung bài đăng</p>
-          </div>
-          <div className="sm:ml-auto flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => setShowPageSelector(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Bài viết mới</span>
-            </button>
           </div>
         </div>
 
@@ -163,8 +150,27 @@ function PostManagementPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
+                <div className="relative">
+                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg">
+                    <Filter size={18} />
+                    <span>
+                      {filterStatus === 'all'
+                        ? 'Tất cả'
+                        : filterStatus === 'approved'
+                          ? 'Đã duyệt'
+                          : 'Vi phạm'}
+                    </span>
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowPageSelector(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Bài viết mới</span>
+                </button>
               </div>
-
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -174,38 +180,103 @@ function PostManagementPage() {
                   <p className="text-red-500">{error}</p>
                 </div>
               ) : currentPosts.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
                   {currentPosts.map((post) => (
                     <div
                       key={post.id}
-                      className="p-4 cursor-pointer hover:bg-gray-50"
-                      onClick={() => navigate(`/moderation/post/${post.id}`)}
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
                     >
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={post.post_avatar_url || 'fallback-avatar.jpg'}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium">{post.page?.name || '???'}</h3>
-                          <p className="text-gray-800 mb-3">
-                            {post.content || '[Không có nội dung]'}
-                          </p>
-                          {post.image_url && (
-                            <img
-                              src={post.image_url}
-                              alt="Post"
-                              className="w-full h-auto rounded-lg mb-3"
-                              loading="lazy"
-                            />
-                          )}
-                          <div className="flex items-center gap-4 text-gray-600 text-sm">
-                            <span className="text-blue-500">{post.likes || 0} lượt thích</span>
-                            <span className="text-green-500">{post.comments || 0} bình luận</span>
-                            <span className="text-orange-500">{post.shares || 0} lượt chia sẻ</span>
+                      {/* Header */}
+                      <div className="p-4 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={post.page_avatar_url || '/public/default-avatar.jpg'}
+                            alt={post.page_name || 'Page Avatar'}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {post.page_name || 'Tên Fanpage'}
+                            </h3>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-clock w-3 h-3"
+                              >
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                              </svg>
+                              <span>{new Date(post.created_time).toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Image */}
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={post.post_avatar_url || '/public/default-avatar.jpg'}
+                          alt="Post image"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                        <button className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-bookmark w-4 h-4 text-gray-700"
+                          >
+                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-4 flex-1">
+                        <p className="text-sm text-gray-800 line-clamp-3 mb-3">
+                          {post.content || '[Không có nội dung]'}
+                        </p>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <FaThumbsUp className="w-4 h-4" />
+                            <span className="text-xs font-medium">{post.likes || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <FaComment className="w-4 h-4" />
+                            <span className="text-xs font-medium">{post.comments || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <FaShare className="w-4 h-4" />
+                            <span className="text-xs font-medium">{post.shares || 0}</span>
+                          </div>
+                        </div>
+                        <a
+                          href={`https://facebook.com/${post.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          <FaFacebook className="w-5 h-5" />
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -270,79 +341,86 @@ function PostManagementPage() {
 
         {/* Phân trang */}
         {activeTab === 'content' && (
-          <nav aria-label="Page navigation example" className="flex justify-center mt-4">
-            <ul className="flex items-center -space-x-px h-10 text-base">
-              {/* Nút Previous */}
-              <li>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className={`flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
-                    currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <span className="sr-only">Previous</span>
-                  <svg
-                    className="w-3 h-3 rtl:rotate-180"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 6 10"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 1 1 5l4 4"
-                    />
-                  </svg>
-                </button>
-              </li>
-
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                <li key={page}>
+          <div className="flex items-center justify-between px-4 py-2">
+            <p className="text-sm text-gray-700">
+              Hiển thị <span className="font-medium">{indexOfFirstPost + 1}</span> đến{' '}
+              <span className="font-medium">{Math.min(indexOfLastPost, filteredPosts.length)}</span>{' '}
+              trong tổng số <span className="font-medium">{filteredPosts.length}</span> bài viết
+            </p>
+            <nav aria-label="Page navigation example" className="flex">
+              <ul className="flex items-center -space-x-px h-10 text-base">
+                {/* Nút Previous */}
+                <li>
                   <button
-                    onClick={() => setCurrentPage(page)}
-                    className={`flex items-center justify-center px-4 h-10 leading-tight ${
-                      currentPage === page
-                        ? 'z-10 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white'
-                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
+                      currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
-                    {page}
+                    <span className="sr-only">Previous</span>
+                    <svg
+                      className="w-3 h-3 rtl:rotate-180"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 6 10"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 1 1 5l4 4"
+                      />
+                    </svg>
                   </button>
                 </li>
-              ))}
 
-              <li>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className={`flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
-                    currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <span className="sr-only">Next</span>
-                  <svg
-                    className="w-3 h-3 rtl:rotate-180"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 6 10"
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <li key={page}>
+                    <button
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex items-center justify-center px-4 h-10 leading-tight ${
+                        currentPage === page
+                          ? 'z-10 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                ))}
+
+                <li>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className={`flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
+                      currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                   >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="m1 9 4-4-4-4"
-                    />
-                  </svg>
-                </button>
-              </li>
-            </ul>
-          </nav>
+                    <span className="sr-only">Next</span>
+                    <svg
+                      className="w-3 h-3 rtl:rotate-180"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 6 10"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="m1 9 4-4-4-4"
+                      />
+                    </svg>
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
         )}
 
         {/* Modal them bai viet moi*/}
