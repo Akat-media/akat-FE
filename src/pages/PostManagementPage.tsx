@@ -9,7 +9,6 @@ import {
   Filter,
   ChevronDown,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
 import ContentModeration from '../components/content-management/post-managenment/ContentModeration.tsx';
@@ -20,7 +19,6 @@ const NewPostModal = lazy(() => import('../components/NewPostModal'));
 const PageSelector = lazy(() => import('../components/PageSelector'));
 
 function PostManagementPage() {
-  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'violated'>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -30,15 +28,14 @@ function PostManagementPage() {
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule' | 'utilities'>('content');
+  const [totalCount, setTotalCount] = useState(0);
+  const postsPerPage = 12;
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 9;
-  const navigate = useNavigate();
-
   const [selectedFanpage, setSelectedFanpage] = useState<any>(null);
   const [showFanpageDropdown, setShowFanpageDropdown] = useState(false);
   const [fanpages, setFanpages] = useState<any[]>([]);
 
-  const fetchPostsFromConnectedPages = async () => {
+  const fetchPostsFromConnectedPages = async (page = 1) => {
     try {
       setLoading(true);
       setError(null);
@@ -54,25 +51,40 @@ function PostManagementPage() {
 
       if (fanpageIds.length === 0) {
         setPosts([]);
+        setTotalCount(0);
         return;
       }
 
-      const postResponse = await axios.post(`${BaseUrl}/facebook-post-list`, {
-        facebook_fanpage_id: fanpageIds,
-      });
-      console.log('Post response data:', postResponse.data);
+      const postResponse = await axios.post(
+        `${BaseUrl}/facebook-post-list?pageSize=${postsPerPage}&page=${page}`,
+        {
+          facebook_fanpage_id: fanpageIds,
+          page,
+          pageSize: postsPerPage,
+          ...(searchQuery && { searchQuery }),
+          ...(selectedFanpage && { fanpageId: selectedFanpage.id }),
+        }
+      );
+
       setPosts(postResponse.data.data?.data || []);
+      setTotalCount(postResponse.data.data?.totalCount || 0);
     } catch (err) {
-      console.error('Lỗi khi tải danh sách bài viết:', err);
-      setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+      console.error('Error fetching posts:', err);
+      setError('Unable to load posts. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
-    fetchPostsFromConnectedPages();
-  }, []);
-  // Fetch danh sách fanpage khi component được mount
+    fetchPostsFromConnectedPages(currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchPostsFromConnectedPages(1);
+  }, [searchQuery, selectedFanpage]);
+
   useEffect(() => {
     const fetchFanpages = async () => {
       try {
@@ -89,26 +101,19 @@ function PostManagementPage() {
     fetchFanpages();
   }, []);
 
-  useEffect(() => {
-    fetchPostsFromConnectedPages();
-  }, []);
-
   const filteredPosts = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return posts
       .filter(
         (post) =>
-          (!selectedFanpage || post.page_id === selectedFanpage.id) && // Lọc theo fanpage
+          (!selectedFanpage || post.page_id === selectedFanpage.id) &&
           ((post.content || '').toLowerCase().includes(query) ||
             (post.page_name || '').toLowerCase().includes(query))
       )
       .sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());
   }, [posts, searchQuery, selectedFanpage]);
 
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const totalPages = Math.ceil(totalCount / postsPerPage);
 
   return (
     <div className="px-6 py-4">
@@ -120,7 +125,6 @@ function PostManagementPage() {
             <p className="text-gray-600">Quản lý và kiểm duyệt nội dung bài đăng</p>
           </div>
         </div>
-
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="flex border-b border-gray-100">
             <button
@@ -242,9 +246,9 @@ function PostManagementPage() {
                 <div className="flex flex-col justify-center items-center text-center min-h-[60vh]">
                   <p className="text-red-500 text-lg height-100">{error}</p>
                 </div>
-              ) : currentPosts.length > 0 ? (
+              ) : posts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-                  {currentPosts.map((post) => (
+                  {posts.map((post) => (
                     <div
                       key={post.id}
                       className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
@@ -404,22 +408,32 @@ function PostManagementPage() {
           )}
         </div>
 
-        {/* Phân trang */}
-        {activeTab === 'content' && (
+        {activeTab === 'content' && totalCount > 0 && (
           <div className="flex items-center justify-between px-4 py-2">
             <p className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">{indexOfFirstPost + 1}</span> đến{' '}
-              <span className="font-medium">{Math.min(indexOfLastPost, filteredPosts.length)}</span>{' '}
-              trong tổng số <span className="font-medium">{filteredPosts.length}</span> bài viết
+              Hiển thị{' '}
+              <span className="font-medium">
+                {Math.min((currentPage - 1) * postsPerPage + 1, totalCount)}
+              </span>{' '}
+              đến{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * postsPerPage, totalCount)}
+              </span>{' '}
+              trong tổng số <span className="font-medium">{totalCount}</span> bài viết
             </p>
-            <nav aria-label="Page navigation example" className="flex">
+
+            <nav aria-label="Page navigation" className="flex">
               <ul className="flex items-center -space-x-px h-10 text-base">
-                {/* Nút Previous */}
+                {/* Previous Button */}
                 <li>
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    onClick={() => {
+                      const prevPage = Math.max(currentPage - 1, 1);
+                      setCurrentPage(prevPage);
+                      fetchPostsFromConnectedPages(prevPage);
+                    }}
                     disabled={currentPage === 1}
-                    className={`flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
+                    className={`flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 ${
                       currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -442,26 +456,45 @@ function PostManagementPage() {
                   </button>
                 </li>
 
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <li key={page}>
-                    <button
-                      onClick={() => setCurrentPage(page)}
-                      className={`flex items-center justify-center px-4 h-10 leading-tight ${
-                        currentPage === page
-                          ? 'z-10 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  </li>
-                ))}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
 
+                  return (
+                    <li key={pageNum}>
+                      <button
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          fetchPostsFromConnectedPages(pageNum);
+                        }}
+                        className={`flex items-center justify-center px-4 h-10 leading-tight ${
+                          currentPage === pageNum
+                            ? 'z-10 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    </li>
+                  );
+                })}
                 <li>
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    onClick={() => {
+                      const nextPage = Math.min(currentPage + 1, totalPages);
+                      setCurrentPage(nextPage);
+                      fetchPostsFromConnectedPages(nextPage);
+                    }}
                     disabled={currentPage === totalPages}
-                    className={`flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
+                    className={`flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 ${
                       currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
@@ -487,7 +520,6 @@ function PostManagementPage() {
             </nav>
           </div>
         )}
-
         {/* Modal them bai viet moi*/}
         {showPageSelector && (
           <Suspense fallback={<div>Loading...</div>}>
