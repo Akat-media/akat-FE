@@ -25,6 +25,8 @@ export interface ConnectedPage {
   page_avatar_url?: string | null;
   follower_count?: number | null;
   page_type?: 'classic' | 'new' | null;
+  facebook_fanpage_id: string;
+  user_id: string;
 }
 interface DeleteConfirmationProps {
   page: ConnectedPage;
@@ -93,6 +95,12 @@ function ConnectedPages({
         .then((res) => setRefreshKey((prev) => prev + 1))
         .catch((err) => setRefreshKey((prev) => prev + 1));
       setPageToDelete(null);
+      
+      await axios
+        .post(`${BaseUrl}/facebook-page-insight/connection`, {
+            facebook_fanpage_id: page.facebook_fanpage_id,
+            user_id: page.user_id,
+        })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to disconnect page');
     } finally {
