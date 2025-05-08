@@ -69,7 +69,9 @@ function PostManagementPage() {
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    fetchPostsFromConnectedPages();
+  }, []);
   // Fetch danh sách fanpage khi component được mount
   useEffect(() => {
     const fetchFanpages = async () => {
@@ -495,11 +497,19 @@ function PostManagementPage() {
                 setShowPageSelector(false);
                 setShowPostModal(true);
               }}
+              data={fanpages}
               onClose={() => setShowPageSelector(false)}
             />
           </Suspense>
         )}
-
+        {showPostModal && (
+          <NewPostModal
+            page={selectedPage}
+            onClose={() => {
+              setShowPostModal(false);
+            }}
+          />
+        )}
         {/* Modal tien ich: kiem duyet noi dung */}
         {showContentModeration && (
           <ContentModeration onClose={() => setShowContentModeration(false)} />

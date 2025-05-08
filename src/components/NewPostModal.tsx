@@ -12,21 +12,16 @@ import {
   Users,
   Sparkles,
 } from 'lucide-react';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
 interface NewPostModalProps {
-  page: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
+  page: any;
   onClose: () => void;
 }
 
 function NewPostModal({ page, onClose }: NewPostModalProps) {
-  const [content, setContent] = useState('');
   const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState('');
-  const [scheduleTime, setScheduleTime] = useState('');
   const [privacy, setPrivacy] = useState<'public' | 'friends' | 'only_me'>('public');
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
@@ -35,7 +30,6 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
   const generateSuggestions = async () => {
     try {
       setGeneratingSuggestions(true);
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
       setSuggestions([
         '🌟 Mẫu váy mới về, chất liệu cotton 100% mềm mại, thoáng mát. Thiết kế trẻ trung, năng động phù hợp cho mọi dịp. Giá chỉ 299k - Inbox ngay để được tư vấn chi tiết! #ThoStore #VayDep',
@@ -54,7 +48,71 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
     setContent(suggestion);
     setShowAiSuggestions(false);
   };
+  const [images, setImages] = useState<any>([]);
+  const [files, setFiles] = useState<any>([]);
+  const [content, setContent] = useState('');
 
+  const handleImageChange = (e: any) => {
+    const files = Array.from(e.target.files);
+    const newImages = files.map((file: any) => URL.createObjectURL(file));
+    setImages((prev: any) => [...prev, ...newImages]);
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setFiles((prev: any) => [...prev, ...files]);
+    }
+  };
+  function createFormData(data: any) {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === 'string' || value instanceof Blob) {
+        formData.append(key, value);
+      }
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          for (let i = 0; i < value.length; i++) {
+            formData.append('files', value[i]);
+          }
+        }
+      }
+    }
+    return formData;
+  }
+  const handleCreateAndSchedulePost = async () => {
+    try {
+      const now = new Date();
+      console.log('now', now.toISOString());
+      const body: any = createFormData({
+        files,
+        content: content,
+        likes: '0',
+        comments: '0',
+        shares: '0',
+        status: 'pending',
+        access_token: page?.access_token[0] || '',
+        posted_at: now.toISOString(),
+        scheduledTime: now.toISOString(),
+        facebook_fanpage_id: page?.facebook_fanpage_id,
+        page_name: page?.name,
+      });
+      for (const [key, value] of body.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+      const res = await axios.post(`${BaseUrl}/facebook-schedule`, body, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setImages([]);
+      setFiles([]);
+      setContent('');
+      // onClose();
+    } catch (error) {
+      setImages([]);
+      setFiles([]);
+      setContent('');
+      console.error('Lỗi khi tải danh sách bài viết:', error);
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
@@ -72,7 +130,9 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             {/* Page Selection */}
             <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
               <img
-                src={page.avatar || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8'}
+                src={
+                  page?.image_url || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8'
+                }
                 alt={page.name}
                 className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow-md"
               />
@@ -102,7 +162,18 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
                 className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-gray-900 placeholder-gray-500 text-lg"
               />
             </div>
-
+            {images.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {images.map((img: any, index: any) => (
+                  <img
+                    key={index}
+                    src={img}
+                    alt={`upload-${index}`}
+                    className="w-32 h-32 object-cover rounded-lg"
+                  />
+                ))}
+              </div>
+            )}
             {/* AI Suggestions */}
             {!showAiSuggestions ? (
               <button
@@ -154,10 +225,21 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             <div className="flex flex-wrap items-center gap-3 p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
               <span className="font-medium text-gray-900">Thêm vào bài viết</span>
               <div className="flex-1 flex flex-wrap items-center gap-2">
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id="imageUpload"
+                  onChange={handleImageChange}
+                />
+                <label
+                  htmlFor="imageUpload"
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors cursor-pointer"
+                >
                   <Image className="w-5 h-5" />
                   <span className="text-sm">Ảnh</span>
-                </button>
+                </label>
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
                   <Video className="w-5 h-5" />
                   <span className="text-sm">Video</span>
@@ -180,50 +262,14 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
                 </button>
               </div>
             </div>
-
-            {/* Schedule Option */}
-            <div>
-              <label className="flex items-center gap-2 text-sm mb-2">
-                <input
-                  type="checkbox"
-                  checked={isScheduled}
-                  onChange={(e) => setIsScheduled(e.target.checked)}
-                  className="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="font-medium">Lên lịch đăng bài</span>
-              </label>
-
-              {isScheduled && (
-                <div className="grid grid-cols-2 gap-4 mt-3 bg-gray-50 p-4 rounded-xl">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ngày đăng
-                    </label>
-                    <input
-                      type="date"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                      className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Giờ đăng</label>
-                    <input
-                      type="time"
-                      value={scheduleTime}
-                      onChange={(e) => setScheduleTime(e.target.value)}
-                      className="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
         <div className="p-4 border-t border-gray-200">
-          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl">
+          <button
+            onClick={handleCreateAndSchedulePost}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+          >
             {isScheduled ? 'Lên lịch đăng' : 'Đăng ngay'}
           </button>
         </div>

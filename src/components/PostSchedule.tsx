@@ -53,95 +53,23 @@ function PostSchedule() {
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [dataListPage, setDataListPage] = useState<any>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dataPostDraft, setDataPostDraft] = useState<any>([]);
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
-  const scheduledPosts: ScheduledPost[] = useMemo(
-    () => [
-      {
-        id: '1',
-        content: 'Mẫu váy mới về, chất liệu cotton 100%, giá chỉ 299k. Inbox để được tư vấn ngay!',
-        scheduledTime: new Date().toISOString(), // Today
-        page: {
-          name: 'Thỏ Store',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'pending',
-      },
-      {
-        id: '2',
-        content: 'Săn sale cuối tuần - Giảm giá sốc toàn bộ sản phẩm',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Tomorrow
-        page: {
-          name: 'Fashion Shop',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-      {
-        id: '3',
-        content: 'Test',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString(),
-        page: {
-          name: 'Fashion Shop',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-      {
-        id: '4',
-        content: 'Siêu phẩm giảm giá 50%',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString(),
-        page: {
-          name: 'Thỏ Store',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-      {
-        id: '5',
-        content: 'Exclusive sale - Giảm giá 30% cho đơn hàng đầu tiên',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 6)).toISOString(),
-        page: {
-          name: 'Fashion Shop',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-      {
-        id: '6',
-        content: 'Madness',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 8)).toISOString(),
-        page: {
-          name: 'Fashion Shop',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-      {
-        id: '7',
-        content: 'Cứu',
-        scheduledTime: new Date(new Date().setDate(new Date().getDate() + 9)).toISOString(),
-        page: {
-          name: 'Fashion Shop',
-          avatar: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8',
-        },
-        status: 'published',
-      },
-    ],
-    []
-  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  console.log('dataPostDraft', dataPostDraft);
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const pageResponse = await axios.get(`${BaseUrl}/facebook-page-insight`, {
-        params: {
-          user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
-        },
-      });
-
+      const [pageResponse] = await Promise.all([
+        axios.get(`${BaseUrl}/facebook-page-insight`, {
+          params: {
+            user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+          },
+        }),
+      ]);
       setDataListPage(pageResponse.data.data || []);
     } catch (err) {
       console.error('Lỗi khi tải danh sách bài viết:', err);
@@ -150,17 +78,32 @@ function PostSchedule() {
       setLoading(false);
     }
   };
+  const handleCallApi = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [postDraftRes] = await Promise.all([
+        axios.get(`${BaseUrl}/facebook-schedule`, {
+          params: {
+            user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+            type: viewMode,
+            date: selectedDate,
+            listPageId: [],
+          },
+        }),
+      ]);
+      setDataPostDraft(postDraftRes.data.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách bài viết:', err);
+      setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+    }
+  };
   useEffect(() => {
     fetchPostsFromConnectedPages();
   }, []);
-  const filteredPosts = useMemo(
-    () =>
-      scheduledPosts.filter((post) =>
-        post.content.toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    [scheduledPosts, searchQuery]
-  );
-
+  useEffect(() => {
+    handleCallApi();
+  }, [viewMode, selectedDate]);
   const daysInWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
   const getDaysInMonth = (date: Date) => {
@@ -207,13 +150,6 @@ function PostSchedule() {
       setSelectedDate(newDate);
     }
   };
-
-  const getPostsForDate = (date: Date) => {
-    return scheduledPosts.filter((post) => {
-      const postDate = new Date(post.scheduledTime);
-      return postDate.toDateString() === date.toDateString();
-    });
-  };
   const RenderMonth = () => {
     const formattedDate = selectedDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
     const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
@@ -231,17 +167,9 @@ function PostSchedule() {
     }
     return days;
   };
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  };
-  const getPostsForDay = (date: Date) => {
-    return scheduledPosts.filter((post) => {
-      const postDate = new Date(post.scheduledTime);
-      return postDate.toDateString() === date.toDateString();
-    });
-  };
   const renderWeek = () => {
     const days = getWeekDays(selectedDate);
+    console.log('days', days);
     return (
       <div className="grid grid-cols-7 gap-2 mb-2">
         {days.map((day, index) => (
@@ -258,39 +186,49 @@ function PostSchedule() {
             </div>
           </div>
         ))}
-        {getWeekDays(selectedDate).map((day, index) => (
+        {days.map((day, index) => (
           <div key={index} className="border border-gray-200 rounded-lg p-2 min-h-[200px]">
-            {getPostsForDay(day).map((post) => (
-              <div
-                key={post.id}
-                className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-              >
+            {dataPostDraft
+              ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
+              ?.list.map((post: any) => (
                 <div
-                  className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                  key={post?.id}
+                  className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >
-                  {post.page.avatar && (
-                    <img
-                      src={post.page.avatar}
-                      alt="Post thumbnail"
-                      className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="text-xs font-medium text-gray-500">
-                        {formatTime(new Date(post.scheduledTime))}
-                      </span>
-                      {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
-                      {post.status === 'published' && (
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                      )}
-                      {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                  <h5 className="font-normal text-[14px] text-gray-900 mb-1">{post?.page_name}</h5>
+                  <div
+                    className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                  >
+                    {typeof post.post_avatar_url == 'string' && (
+                      <img
+                        src={post.post_avatar_url}
+                        alt="Post thumbnail"
+                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                      />
+                    )}
+                    {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
+                      <img
+                        src={post.post_avatar_url?.[0]}
+                        alt="Post thumbnail"
+                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-xs font-medium text-gray-500">
+                          {format(post.posted_at, 'yyyy-MM-dd')}
+                        </span>
+                        {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
+                        {post.status === 'published' && (
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                        )}
+                        {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                      </div>
+                      <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
                     </div>
-                    <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         ))}
       </div>
@@ -309,9 +247,6 @@ function PostSchedule() {
           if (!date) {
             return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
           }
-
-          const posts = getPostsForDate(date);
-
           return (
             <div
               key={date.getTime()}
@@ -332,24 +267,26 @@ function PostSchedule() {
                 )}
               </div>
               <div className="space-y-1">
-                {posts.map((post) => (
-                  <button
-                    key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                      post.status === 'published'
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : post.status === 'failed'
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    }`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    <span className="truncate flex-1">
-                      {format(parseISO(post.scheduledTime), 'HH:mm')} - {post.page.name}
-                    </span>
-                  </button>
-                ))}
+                {dataPostDraft
+                  ?.find((item: any) => item.date == format(date, 'yyyy-MM-dd'))
+                  ?.list.map((post: any) => (
+                    <button
+                      key={post.id}
+                      onClick={() => setSelectedPost(post)}
+                      className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
+                        post.status === 'published'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : post.status === 'failed'
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      }`}
+                    >
+                      <Clock className="w-3 h-3" />
+                      <span className="truncate flex-1">
+                        {format(parseISO(post?.posted_at), 'HH:mm')} - {post?.page_name}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </div>
           );
@@ -391,7 +328,6 @@ function PostSchedule() {
   const handleCreateAndSchedulePost = async () => {
     try {
       const combinedDateTime = new Date(`${postDate}T${postTime}:00`);
-      console.log(files);
       console.log('combinedDateTime', combinedDateTime.toISOString());
       const body: any = createFormData({
         files,
@@ -404,6 +340,7 @@ function PostSchedule() {
         posted_at: combinedDateTime.toISOString(),
         scheduledTime: combinedDateTime.toISOString(),
         facebook_fanpage_id: selectedPage?.facebook_fanpage_id,
+        page_name: selectedPage?.name,
       });
       for (const [key, value] of body.entries()) {
         console.log(`${key}: ${value}`);
@@ -510,35 +447,47 @@ function PostSchedule() {
         >
           <h3 className="font-medium mb-4">Bài đăng sắp tới</h3>
           <div className="space-y-3 max-h-[618px] overflow-y-auto">
-            {filteredPosts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                <div className="flex items-start gap-3">
-                  <img
-                    src={post.page.avatar}
-                    alt={post.page.name}
-                    className="w-20 h-20 rounded-xl object-cover ring-2 ring-white"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-sm">{post.page.name}</h4>
-                      <div className="relative">
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
+            {dataPostDraft
+              ?.flatMap((item: any) => item.list)
+              ?.filter((item: any) => item.status == 'pending')
+              ?.map((post: any) => (
+                <div
+                  key={post.id}
+                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <div className="flex items-start gap-3">
+                    {typeof post.post_avatar_url == 'string' && (
+                      <img
+                        src={post.post_avatar_url}
+                        alt="Post thumbnail"
+                        className={` ${showPostRelease ? 'w-12' : 'w-12'} h-12 rounded object-cover`}
+                      />
+                    )}
+                    {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
+                      <img
+                        src={post.post_avatar_url?.[0]}
+                        alt="Post thumbnail"
+                        className={` ${showPostRelease ? 'w-12' : 'w-12'} h-12 rounded object-cover`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-sm">{post.page_name}</h4>
+                        <div className="relative">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-sm text-gray-600 line-clamp-2">{post.content}</p>
-                    <div className="flex items-center gap-2 mt-3 text-xs font-medium text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span>{new Date(post.scheduledTime).toLocaleString()}</span>
+                      <p className="text-sm text-gray-600 line-clamp-2">{post.content}</p>
+                      <div className="flex items-center gap-2 mt-3 text-xs font-medium text-gray-500">
+                        <Clock className="w-4 h-4" />
+                        <span>{new Date(post.posted_at).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>
@@ -577,7 +526,7 @@ function PostSchedule() {
                 <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl relative">
                   <img
                     src={
-                      selectedPage.avatar ||
+                      selectedPage.image_url ||
                       'https://images.unsplash.com/photo-1441986300917-64674bd600d8'
                     }
                     alt={selectedPage.name}
