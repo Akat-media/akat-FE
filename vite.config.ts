@@ -20,7 +20,7 @@ export default defineConfig({
     allowedHosts: [
       'subcommittee-teeth-excitement-prevent.trycloudflare.com',
       'experts-trader-void-workflow.trycloudflare.com',
-      'brand-yearly-points-avoiding.trycloudflare.com',
+      'reverse-bat-df-closest.trycloudflare.com',
     ],
   },
 });
