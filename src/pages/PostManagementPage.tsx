@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import {
   Search,
   Plus,
@@ -8,19 +8,23 @@ import {
   Settings,
   Filter,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
 import ContentModeration from '../components/content-management/post-managenment/ContentModeration.tsx';
 import { FaThumbsUp, FaComment, FaShare, FaFacebook } from 'react-icons/fa';
+import { useOnOutsideClick } from '../hook/use-outside.tsx';
+import { Pagination } from 'antd';
+import usePagination from '../hook/usePagination.tsx';
+import { debounce } from 'lodash';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
 const PageSelector = lazy(() => import('../components/PageSelector'));
 
 function PostManagementPage() {
-  const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'violated'>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -29,39 +33,26 @@ function PostManagementPage() {
   const [showPostModal, setShowPostModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'content' | 'schedule' | 'utilities'>('content');
-  const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 9;
   const navigate = useNavigate();
-
   const [selectedFanpage, setSelectedFanpage] = useState<any>(null);
   const [showFanpageDropdown, setShowFanpageDropdown] = useState(false);
   const [fanpages, setFanpages] = useState<any[]>([]);
+  const [total, setTotal] = useState<any>(0);
+  const { currentPage, pageSize, handleChange, setCurrentPage, setPageSize } = usePagination(1, 12);
 
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
       setError(null);
-
       const pageResponse = await axios.get(`${BaseUrl}/facebook-page-insight`, {
         params: {
           user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
         },
       });
-
       const pages = pageResponse.data.data || [];
-      const fanpageIds = pages.map((page: any) => page.facebook_fanpage_id);
-
-      if (fanpageIds.length === 0) {
-        setPosts([]);
-        return;
-      }
-
-      const postResponse = await axios.post(`${BaseUrl}/facebook-post-list`, {
-        facebook_fanpage_id: fanpageIds,
-      });
-      console.log('Post response data:', postResponse.data);
-      setPosts(postResponse.data.data?.data || []);
+      setFanpages(pages);
     } catch (err) {
       console.error('Lỗi khi tải danh sách bài viết:', err);
       setError('Không thể tải bài viết. Vui lòng thử lại sau.');
@@ -72,43 +63,57 @@ function PostManagementPage() {
   useEffect(() => {
     fetchPostsFromConnectedPages();
   }, []);
-  // Fetch danh sách fanpage khi component được mount
-  useEffect(() => {
-    const fetchFanpages = async () => {
-      try {
-        const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
-          params: {
-            user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
-          },
-        });
-        setFanpages(response.data.data || []);
-      } catch (err) {
-        console.error('Lỗi khi tải danh sách fanpage:', err);
+  const handleCallPost = async () => {
+    setLoading(true);
+    try {
+      let chosseFanpage = [];
+      if (!selectedFanpage) {
+        chosseFanpage = fanpages.map((page: any) => page.facebook_fanpage_id);
+      } else {
+        chosseFanpage.push(selectedFanpage.facebook_fanpage_id);
       }
+      const postResponse = await axios.post(
+        `${BaseUrl}/facebook-post-list`,
+        {
+          facebook_fanpage_id: chosseFanpage,
+          content: search || '',
+        },
+        {
+          params: {
+            page: currentPage,
+            pageSize: pageSize,
+          },
+        }
+      );
+      setPosts(postResponse.data.data?.data || []);
+      setTotal(postResponse.data.data?.totalCount || 0);
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách bài viết:', error);
+      setError('Không thể tải bài viết. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const debouncedHandleCallPost = useCallback(
+    debounce((value) => {
+      setSearch(value);
+    }, 1500),
+    []
+  );
+  useEffect(() => {
+    debouncedHandleCallPost(searchQuery);
+    return () => {
+      debouncedHandleCallPost.cancel();
     };
-    fetchFanpages();
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
-    fetchPostsFromConnectedPages();
-  }, []);
+    if (fanpages.length > 0) {
+      handleCallPost();
+    }
+  }, [fanpages, currentPage, pageSize, selectedFanpage, search]);
 
-  const filteredPosts = useMemo(() => {
-    const query = searchQuery.toLowerCase();
-    return posts
-      .filter(
-        (post) =>
-          (!selectedFanpage || post.page_id === selectedFanpage.id) && // Lọc theo fanpage
-          ((post.content || '').toLowerCase().includes(query) ||
-            (post.page_name || '').toLowerCase().includes(query))
-      )
-      .sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());
-  }, [posts, searchQuery, selectedFanpage]);
-
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const { innerBorderRef } = useOnOutsideClick(() => setShowFanpageDropdown(false));
 
   return (
     <div className="px-6 py-4">
@@ -176,6 +181,13 @@ function PostManagementPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                    {searchQuery && (
+                      <X
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-800 cursor-pointer"
+                        size={20}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="col-span-1 sm:col-span-1 relative">
@@ -194,34 +206,36 @@ function PostManagementPage() {
                     </div>
                     <ChevronDown size={18} />
                   </button>
-                  {showFanpageDropdown && (
-                    <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto right-0">
-                      <ul>
-                        <li
-                          onClick={() => {
-                            setSelectedFanpage(null);
-                            setShowFanpageDropdown(false);
-                          }}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                          Tất Cả
-                        </li>
-                        {fanpages.map((fanpage) => (
+                  <div ref={innerBorderRef}>
+                    {showFanpageDropdown && (
+                      <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto right-0">
+                        <ul className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
                           <li
-                            key={fanpage.id}
                             onClick={() => {
-                              setSelectedFanpage(fanpage);
+                              setSelectedFanpage(null);
                               setShowFanpageDropdown(false);
                             }}
                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            title={fanpage.name}
                           >
-                            {fanpage.name}
+                            Tất Cả
                           </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                          {fanpages?.map((fanpage) => (
+                            <li
+                              key={fanpage.id}
+                              onClick={() => {
+                                setSelectedFanpage(fanpage);
+                                setShowFanpageDropdown(false);
+                              }}
+                              className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${selectedFanpage?.id === fanpage.id ? 'bg-gray-100' : ''}`}
+                              title={fanpage.name}
+                            >
+                              {fanpage.name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="col-span-1 sm:col-span-1 flex sm:justify-end">
                   <button
@@ -242,9 +256,9 @@ function PostManagementPage() {
                 <div className="flex flex-col justify-center items-center text-center min-h-[60vh]">
                   <p className="text-red-500 text-lg height-100">{error}</p>
                 </div>
-              ) : currentPosts.length > 0 ? (
+              ) : posts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-                  {currentPosts.map((post) => (
+                  {posts.map((post) => (
                     <div
                       key={post.id}
                       className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
@@ -347,7 +361,7 @@ function PostManagementPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
+                <div className="text-center py-12 min-h-60">
                   <p className="text-gray-500">Không tìm thấy bài viết nào</p>
                 </div>
               )}
@@ -405,86 +419,14 @@ function PostManagementPage() {
         </div>
 
         {/* Phân trang */}
-        {activeTab === 'content' && (
-          <div className="flex items-center justify-between px-4 py-2">
-            <p className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">{indexOfFirstPost + 1}</span> đến{' '}
-              <span className="font-medium">{Math.min(indexOfLastPost, filteredPosts.length)}</span>{' '}
-              trong tổng số <span className="font-medium">{filteredPosts.length}</span> bài viết
-            </p>
-            <nav aria-label="Page navigation example" className="flex">
-              <ul className="flex items-center -space-x-px h-10 text-base">
-                {/* Nút Previous */}
-                <li>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className={`flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
-                      currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <span className="sr-only">Previous</span>
-                    <svg
-                      className="w-3 h-3 rtl:rotate-180"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 6 10"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 1 1 5l4 4"
-                      />
-                    </svg>
-                  </button>
-                </li>
-
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-                  <li key={page}>
-                    <button
-                      onClick={() => setCurrentPage(page)}
-                      className={`flex items-center justify-center px-4 h-10 leading-tight ${
-                        currentPage === page
-                          ? 'z-10 text-blue-600 border border-blue-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  </li>
-                ))}
-
-                <li>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className={`flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white ${
-                      currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <span className="sr-only">Next</span>
-                    <svg
-                      className="w-3 h-3 rtl:rotate-180"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 6 10"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 9 4-4-4-4"
-                      />
-                    </svg>
-                  </button>
-                </li>
-              </ul>
-            </nav>
+        {Boolean(total) && activeTab == 'content' && (
+          <div className="mt-4">
+            <Pagination
+              total={total}
+              onChange={handleChange}
+              current={currentPage}
+              pageSize={pageSize}
+            />
           </div>
         )}
 
@@ -508,6 +450,10 @@ function PostManagementPage() {
               page={selectedPage}
               onClose={() => {
                 setShowPostModal(false);
+              }}
+              onSuccess={() => {
+                setSearch('');
+                setCurrentPage(1);
               }}
             />
           </Suspense>

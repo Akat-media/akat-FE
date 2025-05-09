@@ -20,9 +20,10 @@ import LoadingContent from './content-management/post-managenment/LoadingContent
 interface NewPostModalProps {
   page: any;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-function NewPostModal({ page, onClose }: NewPostModalProps) {
+function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isScheduled, setIsScheduled] = useState(false);
   const [privacy, setPrivacy] = useState<'public' | 'friends' | 'only_me'>('public');
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
@@ -101,24 +102,44 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
       for (const [key, value] of body.entries()) {
         console.log(`${key}: ${value}`);
       }
-      const res = await axios.post(`${BaseUrl}/facebook-schedule`, body, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      setImages([]);
-      setFiles([]);
-      setContent('');
-      // onClose();
-      toast.success('Đăng bài thành công!', {
-        position: 'top-right',
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: false,
-        progress: undefined,
-      });
+      const res = await axios
+        .post(`${BaseUrl}/facebook-schedule`, body, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+        .then((res) => {
+          setImages([]);
+          setFiles([]);
+          setContent('');
+          onSuccess();
+          onClose();
+          toast.success('Đăng bài thành công!', {
+            position: 'top-right',
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+          });
+        })
+        .catch(() => {
+          setImages([]);
+          setFiles([]);
+          setContent('');
+          onSuccess();
+          onClose();
+          toast.error('Đăng bài thất bại!', {
+            position: 'top-right',
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: false,
+            draggable: false,
+            progress: undefined,
+          });
+        });
     } catch (error) {
       setImages([]);
       setFiles([]);
@@ -130,9 +151,7 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
-    setImages((prevImages: string[]) =>
-      prevImages.filter((_, index) => index !== indexToRemove)
-    );
+    setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
   return (
@@ -305,13 +324,12 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             onClick={handleCreateAndSchedulePost}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {/* {isLoading && <Loader2 className="w-4 h-4 animate-spin" />} */}
             {isScheduled ? 'Lên lịch đăng' : 'Đăng ngay'}
           </button>
         </div>
 
         {isLoading && LoadingContent()}
-
       </div>
     </div>
   );
