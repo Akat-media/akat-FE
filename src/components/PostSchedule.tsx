@@ -26,6 +26,7 @@ import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { toast } from 'react-toastify';
 
 interface Page {
   id: string;
@@ -356,6 +357,17 @@ function PostSchedule() {
       setPostTime('');
       setContent('');
       setShowNewPost(false);
+      toast.success('Lên lịch đăng thành công!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+
+      await handleCallApi();
     } catch (error) {
       setImages([]);
       setFiles([]);

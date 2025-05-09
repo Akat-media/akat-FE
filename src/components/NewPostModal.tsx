@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { toast } from 'react-toastify';
 
 interface NewPostModalProps {
   page: any;
@@ -51,6 +52,7 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
   const [images, setImages] = useState<any>([]);
   const [files, setFiles] = useState<any>([]);
   const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleImageChange = (e: any) => {
     const files = Array.from(e.target.files);
@@ -79,6 +81,7 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
   }
   const handleCreateAndSchedulePost = async () => {
     try {
+      setIsLoading(true);
       const now = new Date();
       console.log('now', now.toISOString());
       const body: any = createFormData({
@@ -106,13 +109,31 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
       setFiles([]);
       setContent('');
       // onClose();
+      toast.success('Đăng bài thành công!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
     } catch (error) {
       setImages([]);
       setFiles([]);
       setContent('');
       console.error('Lỗi khi tải danh sách bài viết:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prevImages: string[]) =>
+      prevImages.filter((_, index) => index !== indexToRemove)
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
@@ -165,12 +186,25 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             {images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
                 {images.map((img: any, index: any) => (
-                  <img
-                    key={index}
-                    src={img}
-                    alt={`upload-${index}`}
-                    className="w-32 h-32 object-cover rounded-lg"
-                  />
+                  // <img
+                  //   key={index}
+                  //   src={img}
+                  //   alt={`upload-${index}`}
+                  //   className="w-32 h-32 object-cover rounded-lg"
+                  // />
+                  <div key={index} className="relative w-32 h-32">
+                    <img
+                      src={img}
+                      alt={`upload-${index}`}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -270,9 +304,18 @@ function NewPostModal({ page, onClose }: NewPostModalProps) {
             onClick={handleCreateAndSchedulePost}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
           >
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {isScheduled ? 'Lên lịch đăng' : 'Đăng ngay'}
           </button>
         </div>
+
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center z-50 space-y-4">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
+            <p className="text-white text-lg font-medium">Đang đăng bài...</p>
+          </div>
+        )}
+
       </div>
     </div>
   );

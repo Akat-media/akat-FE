@@ -503,12 +503,14 @@ function PostManagementPage() {
           </Suspense>
         )}
         {showPostModal && (
-          <NewPostModal
-            page={selectedPage}
-            onClose={() => {
-              setShowPostModal(false);
-            }}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <NewPostModal
+              page={selectedPage}
+              onClose={() => {
+                setShowPostModal(false);
+              }}
+            />
+          </Suspense>
         )}
         {/* Modal tien ich: kiem duyet noi dung */}
         {showContentModeration && (
