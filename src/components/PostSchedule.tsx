@@ -170,7 +170,6 @@ function PostSchedule() {
   };
   const renderWeek = () => {
     const days = getWeekDays(selectedDate);
-    console.log('days', days);
     return (
       <div className="grid grid-cols-7 gap-2 mb-2">
         {days.map((day, index) => (
@@ -196,7 +195,9 @@ function PostSchedule() {
                   key={post?.id}
                   className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <h5 className="font-normal text-[14px] text-gray-900 mb-1">{post?.page_name}</h5>
+                  <h5 className="font-normal text-[14px] text-gray-900 mb-1 truncate">
+                    {post?.page_name}
+                  </h5>
                   <div
                     className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
                   >
@@ -225,9 +226,9 @@ function PostSchedule() {
                         )}
                         {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
                       </div>
-                      <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
                     </div>
                   </div>
+                  <p className="text-sm text-gray-800 truncate">{post.content}</p>
                 </div>
               ))}
           </div>

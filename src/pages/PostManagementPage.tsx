@@ -19,6 +19,7 @@ import { useOnOutsideClick } from '../hook/use-outside.tsx';
 import { Pagination } from 'antd';
 import usePagination from '../hook/usePagination.tsx';
 import { debounce } from 'lodash';
+import defaultImage from '../../public/default-avatar.jpg';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
@@ -267,7 +268,12 @@ function PostManagementPage() {
                       <div className="p-4 border-b border-gray-100">
                         <div className="flex items-center gap-3">
                           <img
-                            src={post.page_avatar_url || '/public/default-avatar.jpg'}
+                            src={
+                              fanpages?.find(
+                                (fanpage) =>
+                                  fanpage?.facebook_fanpage_id == post?.facebook_fanpage_id
+                              )?.image_url || defaultImage
+                            }
                             alt={post.page_name || 'Page Avatar'}
                             className="w-10 h-10 rounded-full object-cover"
                           />
