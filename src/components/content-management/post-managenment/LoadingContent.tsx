@@ -7,8 +7,7 @@ const LoadingContent = () => {
       <Loader2 className="w-10 h-10 text-white animate-spin" />
       <p className="text-white text-lg font-medium">Đang đăng bài...</p>
     </div>
-  )
-
+  );
 };
 
 export default LoadingContent;

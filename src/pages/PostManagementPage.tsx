@@ -308,7 +308,7 @@ function PostManagementPage() {
                       {/* Image */}
                       <div className="relative h-48 overflow-hidden">
                         <img
-                          src={post.post_avatar_url || '/public/default-avatar.jpg'}
+                          src={post.post_avatar_url || defaultImage}
                           alt="Post image"
                           className="w-full h-full object-cover"
                         />
