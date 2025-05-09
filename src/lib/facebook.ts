@@ -36,6 +36,7 @@ export const REQUIRED_PERMISSIONS = [
   'pages_manage_metadata', // Manage page metadata
   'pages_manage_engagement', // Manage engagement
   'pages_read_user_content', // Read user content
+  'read_insights',
 ];
 
 let fbSDKInitialized = false;

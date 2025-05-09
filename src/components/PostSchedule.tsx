@@ -27,6 +27,7 @@ import { format, isToday, parseISO } from 'date-fns';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
 import { toast } from 'react-toastify';
+import ListPostSchedule from './content-management/post-managenment/ListPostSchedule.tsx';
 
 interface Page {
   id: string;
@@ -45,6 +46,7 @@ interface ScheduledPost {
   status: 'pending' | 'published' | 'failed';
   posted_at: string;
   page_name: string;
+  post_avatar_url: string;
 }
 
 function PostSchedule() {
@@ -61,7 +63,6 @@ function PostSchedule() {
 
   // thêm state để lưu trữ ngày nào đang mở rộng
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
-
   // hàm toggle trạng thái mở rộng của một ngày
   const toggleExpand = (dateKey: string) => {
     setExpandedDates(prev => ({
@@ -69,6 +70,10 @@ function PostSchedule() {
       [dateKey]: !prev[dateKey],
     }));
   };
+  const [openScheduleModal, setOpenScheduleModal] = useState(false);
+  const [dataListPosts, setDataListPosts] = useState<any>([]);
+  const [modalDate, setModalDate] = useState<string | null>(null);
+  const [modalPosts, setModalPosts] = useState<ScheduledPost[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -250,8 +255,8 @@ function PostSchedule() {
     );
   };
   const renderMonth = () => {
-    const days = getDaysInMonth(selectedDate);
-    return (
+  const days = getDaysInMonth(selectedDate);
+  return (
       <div className="grid grid-cols-7 gap-1">
         {/* Tiêu đề thứ */}
         {daysInWeek.map(day => (
@@ -315,18 +320,38 @@ function PostSchedule() {
                 ))}
 
                 {/* Nút Show more / Show less */}
-                {posts.length > 1 && (
-                  <button
-                    onClick={() => toggleExpand(dateKey)}
-                    className="text-blue-600 text-xs font-medium mt-1 hover:underline"
-                  >
-                    {isExpanded ? 'Hiển thị ít đi' : `Hiển thị thêm`}
-                  </button>
-                )}
+                  {posts.length > 1 && (
+                    <button
+                        onClick={() => {
+                        // lưu ngày và danh sách posts tương ứng vào state
+                        setModalDate(dateKey);
+                        setModalPosts(posts);
+                        setOpenScheduleModal(true);
+                       }}
+                       className="text-blue-600 text-xs font-medium mt-1 hover:underline"
+                     >
+                       Hiển thị thêm
+                     </button>
+                   )}
               </div>
             </div>
           );
         })}
+
+        {/* Page Selector Modal */}
+        {openScheduleModal && (
+             <ListPostSchedule
+                date={modalDate}
+                posts={modalPosts}
+                onPageSelect={(page) => {
+                 setSelectedPage(page);
+                 setOpenScheduleModal(false);
+                 setShowNewPost(true);
+                }}
+                data={dataListPage}
+                onClose={() => setOpenScheduleModal(false)}
+             />
+        )}
       </div>
     );
   };
