@@ -20,6 +20,7 @@ import {
 import { supabase } from '../lib/supabase';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { useNavigate } from 'react-router-dom';
 
 interface StatCard {
   title: string;
@@ -199,6 +200,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
 }
 
 function ResourcePage() {
+  const navigate = useNavigate();
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -386,7 +388,10 @@ function ResourcePage() {
               <span>Xuất</span>
             </button>
             <button
-              onClick={() => setShowAddPage(true)}
+              onClick={() => {
+                setShowAddPage(true);
+                navigate('/connection');
+              }}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
             >
               <Plus className="w-4 h-4" />

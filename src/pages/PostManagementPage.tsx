@@ -115,6 +115,24 @@ function PostManagementPage() {
   }, [fanpages, currentPage, pageSize, selectedFanpage, search]);
 
   const { innerBorderRef } = useOnOutsideClick(() => setShowFanpageDropdown(false));
+  function getFirstImage(input: any) {
+    if (!input || input.trim() === '') {
+      return defaultImage;
+    }
+    try {
+      const parsed = JSON.parse(input);
+      console.log(parsed);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0];
+      }
+    } catch (e) {
+      if (typeof input === 'string' && input.startsWith('http')) {
+        return input;
+      }
+    }
+
+    return defaultImage;
+  }
 
   return (
     <div className="px-6 py-4">
@@ -269,10 +287,12 @@ function PostManagementPage() {
                         <div className="flex items-center gap-3">
                           <img
                             src={
-                              fanpages?.find(
-                                (fanpage) =>
-                                  fanpage?.facebook_fanpage_id == post?.facebook_fanpage_id
-                              )?.image_url || defaultImage
+                              getFirstImage(
+                                fanpages?.find(
+                                  (fanpage) =>
+                                    fanpage?.facebook_fanpage_id == post?.facebook_fanpage_id
+                                )?.image_url
+                              ) || defaultImage
                             }
                             alt={post.page_name || 'Page Avatar'}
                             className="w-10 h-10 rounded-full object-cover"
@@ -308,7 +328,7 @@ function PostManagementPage() {
                       {/* Image */}
                       <div className="relative h-48 overflow-hidden">
                         <img
-                          src={post.post_avatar_url || defaultImage}
+                          src={getFirstImage(post.post_avatar_url) || defaultImage}
                           alt="Post image"
                           className="w-full h-full object-cover"
                         />
