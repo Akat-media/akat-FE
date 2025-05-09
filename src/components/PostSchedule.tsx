@@ -43,6 +43,8 @@ interface ScheduledPost {
     avatar?: string;
   };
   status: 'pending' | 'published' | 'failed';
+  posted_at: string;
+  page_name: string;
 }
 
 function PostSchedule() {
@@ -56,6 +58,17 @@ function PostSchedule() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dataPostDraft, setDataPostDraft] = useState<any>([]);
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+
+  // thêm state để lưu trữ ngày nào đang mở rộng
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+
+  // hàm toggle trạng thái mở rộng của một ngày
+  const toggleExpand = (dateKey: string) => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [dateKey]: !prev[dateKey],
+    }));
+  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -240,22 +253,33 @@ function PostSchedule() {
     const days = getDaysInMonth(selectedDate);
     return (
       <div className="grid grid-cols-7 gap-1">
-        {daysInWeek.map((day) => (
+        {/* Tiêu đề thứ */}
+        {daysInWeek.map(day => (
           <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
             {day}
           </div>
         ))}
-        {days.map((date, index) => {
-          if (!date) {
-            return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
-          }
+
+        {/* Duyệt từng ngày */}
+        {days.map((date, idx) => {
+          if (!date) return <div key={idx} className="p-2 min-h-[100px]" />;
+
+          const dateKey = format(date, 'yyyy-MM-dd');
+          // tìm danh sách bài của ngày này
+          const dayData = dataPostDraft.find((item: any) => item.date === dateKey);
+          const posts = dayData?.list || [];
+          const isExpanded = expandedDates[dateKey] || false;
+          // nếu chưa mở rộng thì chỉ lấy 1 bài
+          const postsToShow = isExpanded ? posts : posts.slice(0, 1);
+
           return (
             <div
-              key={date.getTime()}
+              key={dateKey}
               className={`p-2 min-h-[100px] rounded-lg transition-all ${
                 isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
               }`}
             >
+              {/* Ngày và label “Hôm nay” */}
               <div
                 className={`text-sm font-medium mb-2 flex items-center justify-between ${
                   isToday(date) ? 'text-blue-600' : ''
@@ -268,27 +292,37 @@ function PostSchedule() {
                   </span>
                 )}
               </div>
+
+              {/* Hiển thị các bài */}
               <div className="space-y-1">
-                {dataPostDraft
-                  ?.find((item: any) => item.date == format(date, 'yyyy-MM-dd'))
-                  ?.list.map((post: any) => (
-                    <button
-                      key={post.id}
-                      onClick={() => setSelectedPost(post)}
-                      className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                        post.status === 'published'
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : post.status === 'failed'
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                      }`}
-                    >
-                      <Clock className="w-3 h-3" />
-                      <span className="truncate flex-1">
-                        {format(parseISO(post?.posted_at), 'HH:mm')} - {post?.page_name}
-                      </span>
-                    </button>
-                  ))}
+                {postsToShow.map((post: ScheduledPost) => (
+                  <button
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className={`w-full text-left p-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
+                      post.status === 'published'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : post.status === 'failed'
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span className="truncate flex-1">
+                      {format(parseISO(post.posted_at), 'HH:mm')} – {post.page_name}
+                    </span>
+                  </button>
+                ))}
+
+                {/* Nút Show more / Show less */}
+                {posts.length > 1 && (
+                  <button
+                    onClick={() => toggleExpand(dateKey)}
+                    className="text-blue-600 text-xs font-medium mt-1 hover:underline"
+                  >
+                    {isExpanded ? 'Hiển thị ít đi' : `Hiển thị thêm`}
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -296,6 +330,7 @@ function PostSchedule() {
       </div>
     );
   };
+
   const [images, setImages] = useState<any>([]);
   const [files, setFiles] = useState<any>([]);
   const [postDate, setPostDate] = useState('');
@@ -311,6 +346,13 @@ function PostSchedule() {
       setFiles((prev: any) => [...prev, ...files]);
     }
   };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prevImages: string[]) =>
+      prevImages.filter((_, index) => index !== indexToRemove)
+    );
+  };
+
   function createFormData(data: any) {
     const formData = new FormData();
     for (const [key, value] of Object.entries(data)) {
@@ -567,14 +609,31 @@ function PostSchedule() {
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
                   {images.length > 0 && (
+                    // <div className="mt-4 flex flex-wrap gap-3">
+                    //   {images.map((img: any, index: any) => (
+                    //     <img
+                    //       key={index}
+                    //       src={img}
+                    //       alt={`upload-${index}`}
+                    //       className="w-32 h-32 object-cover rounded-lg"
+                    //     />
+                    //   ))}
+                    // </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                       {images.map((img: any, index: any) => (
-                        <img
-                          key={index}
-                          src={img}
-                          alt={`upload-${index}`}
-                          className="w-32 h-32 object-cover rounded-lg"
-                        />
+                        <div key={index} className="relative w-32 h-32">
+                          <img
+                            src={img}
+                            alt={`upload-${index}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
