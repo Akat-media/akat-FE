@@ -43,6 +43,8 @@ interface ScheduledPost {
     avatar?: string;
   };
   status: 'pending' | 'published' | 'failed';
+  posted_at: string;
+  page_name: string;
 }
 
 function PostSchedule() {
@@ -293,7 +295,7 @@ function PostSchedule() {
 
               {/* Hiển thị các bài */}
               <div className="space-y-1">
-                {postsToShow.map(post => (
+                {postsToShow.map((post: ScheduledPost) => (
                   <button
                     key={post.id}
                     onClick={() => setSelectedPost(post)}
