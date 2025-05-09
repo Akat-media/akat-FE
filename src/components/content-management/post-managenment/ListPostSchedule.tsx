@@ -40,13 +40,8 @@ export default function ListPostSchedule({
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <header className="flex justify-between items-center border-b pb-3 mb-4">
-          <h3 className="text-xl font-semibold text-gray-800">
-            📅 Lịch đăng bài
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-red-500 transition"
-          >
+          <h3 className="text-xl font-semibold text-gray-800">📅 Lịch đăng bài</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-red-500 transition">
             <X size={20} />
           </button>
         </header>
@@ -75,20 +70,26 @@ export default function ListPostSchedule({
                     <span className="font-medium text-gray-800">{post.page_name}</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                   {format(parseISO(post.posted_at), 'dd-MM-yyyy HH:mm')}
+                    {format(parseISO(post.posted_at), 'dd-MM-yyyy HH:mm')}
                   </span>
                 </div>
 
                 <p className="text-sm text-gray-700 line-clamp-3 mb-2">{post.content}</p>
 
-                {post.post_avatar_url && (
+                {typeof post.post_avatar_url == 'string' && (
                   <img
                     src={post.post_avatar_url}
                     alt="Post"
                     className="w-full h-40 object-cover rounded-lg mb-2"
                   />
                 )}
-
+                {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
+                  <img
+                    src={post?.post_avatar_url?.[0]}
+                    alt="Post"
+                    className="w-full h-40 object-cover rounded-lg mb-2"
+                  />
+                )}
                 <span
                   className={`text-xs font-semibold px-2 py-1 rounded-full ${
                     post.status === 'pending'
