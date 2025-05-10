@@ -107,7 +107,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors"
+      className="cursor-pointer bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors"
       onClick={handleClick}
     >
       <div className="p-4">
