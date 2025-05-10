@@ -100,8 +100,16 @@ function StatCard({ title, value, icon: Icon, change, total, color }: StatCard) 
 }
 
 function FacebookPageCard({ page }: { page: FacebookPage }) {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate('/moderation/posts');
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors">
+    <div
+      className="cursor-pointer bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors"
+      onClick={handleClick}
+    >
       <div className="p-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
