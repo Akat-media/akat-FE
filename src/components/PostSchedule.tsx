@@ -65,7 +65,7 @@ function PostSchedule() {
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
   // hàm toggle trạng thái mở rộng của một ngày
   const toggleExpand = (dateKey: string) => {
-    setExpandedDates(prev => ({
+    setExpandedDates((prev) => ({
       ...prev,
       [dateKey]: !prev[dateKey],
     }));
@@ -255,11 +255,11 @@ function PostSchedule() {
     );
   };
   const renderMonth = () => {
-  const days = getDaysInMonth(selectedDate);
-  return (
+    const days = getDaysInMonth(selectedDate);
+    return (
       <div className="grid grid-cols-7 gap-1">
         {/* Tiêu đề thứ */}
-        {daysInWeek.map(day => (
+        {daysInWeek.map((day) => (
           <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
             {day}
           </div>
@@ -320,19 +320,19 @@ function PostSchedule() {
                 ))}
 
                 {/* Nút Show more / Show less */}
-                  {posts.length > 1 && (
-                    <button
-                        onClick={() => {
-                        // lưu ngày và danh sách posts tương ứng vào state
-                        setModalDate(dateKey);
-                        setModalPosts(posts);
-                        setOpenScheduleModal(true);
-                       }}
-                       className="text-blue-600 text-xs font-medium mt-1 hover:underline"
-                     >
-                       Hiển thị thêm
-                     </button>
-                   )}
+                {posts.length > 1 && (
+                  <button
+                    onClick={() => {
+                      // lưu ngày và danh sách posts tương ứng vào state
+                      setModalDate(dateKey);
+                      setModalPosts(posts);
+                      setOpenScheduleModal(true);
+                    }}
+                    className="text-blue-600 text-xs font-medium mt-1 hover:underline"
+                  >
+                    Hiển thị thêm
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -340,17 +340,17 @@ function PostSchedule() {
 
         {/* Page Selector Modal */}
         {openScheduleModal && (
-             <ListPostSchedule
-                date={modalDate}
-                posts={modalPosts}
-                onPageSelect={(page) => {
-                 setSelectedPage(page);
-                 setOpenScheduleModal(false);
-                 setShowNewPost(true);
-                }}
-                data={dataListPage}
-                onClose={() => setOpenScheduleModal(false)}
-             />
+          <ListPostSchedule
+            date={modalDate}
+            posts={modalPosts}
+            onPageSelect={(page) => {
+              setSelectedPage(page);
+              setOpenScheduleModal(false);
+              setShowNewPost(true);
+            }}
+            data={dataListPage}
+            onClose={() => setOpenScheduleModal(false)}
+          />
         )}
       </div>
     );
@@ -373,9 +373,7 @@ function PostSchedule() {
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
-    setImages((prevImages: string[]) =>
-      prevImages.filter((_, index) => index !== indexToRemove)
-    );
+    setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
   function createFormData(data: any) {
@@ -386,9 +384,7 @@ function PostSchedule() {
       }
       if (Array.isArray(value)) {
         for (let i = 0; i < value.length; i++) {
-          for (let i = 0; i < value.length; i++) {
-            formData.append('files', value[i]);
-          }
+          formData.append('files', value[i]);
         }
       }
     }

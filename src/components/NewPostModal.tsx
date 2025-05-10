@@ -73,9 +73,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       }
       if (Array.isArray(value)) {
         for (let i = 0; i < value.length; i++) {
-          for (let i = 0; i < value.length; i++) {
-            formData.append('files', value[i]);
-          }
+          formData.append('files', value[i]);
         }
       }
     }
@@ -86,6 +84,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       setIsLoading(true);
       const now = new Date();
       console.log('now', now.toISOString());
+      console.log('Số lượng files gửi đi:', files.length);
       const body: any = createFormData({
         files,
         content: content,
