@@ -213,11 +213,16 @@ function PostSchedule() {
               {dataPostDraft
                 ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
                 ?.list.map((post: any) => (
-                  <div key={post?.id} className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <div
+                    key={post?.id}
+                    className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  >
                     <h5 className="font-normal text-[14px] text-gray-900 mb-1 truncate">
                       {post?.page_name}
                     </h5>
-                    <div className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}>
+                    <div
+                      className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                    >
                       {typeof post.post_avatar_url === 'string' && (
                         <img
                           src={post.post_avatar_url}
@@ -256,7 +261,6 @@ function PostSchedule() {
             </div>
           );
         })}
-
       </div>
     );
   };
