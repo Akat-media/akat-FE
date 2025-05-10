@@ -204,53 +204,59 @@ function PostSchedule() {
             </div>
           </div>
         ))}
-        {days.map((day, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg p-2 min-h-[200px]">
-            {dataPostDraft
-              ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
-              ?.list.map((post: any) => (
-                <div
-                  key={post?.id}
-                  className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <h5 className="font-normal text-[14px] text-gray-900 mb-1 truncate">
-                    {post?.page_name}
-                  </h5>
-                  <div
-                    className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
-                  >
-                    {typeof post.post_avatar_url == 'string' && (
-                      <img
-                        src={post.post_avatar_url}
-                        alt="Post thumbnail"
-                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
-                      />
-                    )}
-                    {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
-                      <img
-                        src={post.post_avatar_url?.[0]}
-                        alt="Post thumbnail"
-                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-xs font-medium text-gray-500">
-                          {format(post.posted_at, 'yyyy-MM-dd')}
-                        </span>
-                        {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
-                        {post.status === 'published' && (
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                        )}
-                        {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+        {days.map((day, index) => {
+          return (
+            <div
+              key={index}
+              className="border border-gray-200 rounded-lg p-2 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            >
+              {dataPostDraft
+                ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
+                ?.list.map((post: any) => (
+                  <div key={post?.id} className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <h5 className="font-normal text-[14px] text-gray-900 mb-1 truncate">
+                      {post?.page_name}
+                    </h5>
+                    <div className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}>
+                      {typeof post.post_avatar_url === 'string' && (
+                        <img
+                          src={post.post_avatar_url}
+                          alt="Post thumbnail"
+                          className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                        />
+                      )}
+                      {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
+                        <img
+                          src={post.post_avatar_url?.[0]}
+                          alt="Post thumbnail"
+                          className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-medium text-gray-500">
+                            {format(post.posted_at, 'yyyy-MM-dd')}
+                          </span>
+                          {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
+                          {post.status === 'published' && (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          )}
+                          {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                        </div>
+                        <div>
+                          <span className="text-xs font-medium text-gray-500">
+                            {format(parseISO(post.posted_at), 'HH:mm')}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <p className="text-sm text-gray-800 truncate">{post.content}</p>
                   </div>
-                  <p className="text-sm text-gray-800 truncate">{post.content}</p>
-                </div>
-              ))}
-          </div>
-        ))}
+                ))}
+            </div>
+          );
+        })}
+
       </div>
     );
   };
