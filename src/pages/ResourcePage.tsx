@@ -99,12 +99,11 @@ function StatCard({ title, value, icon: Icon, change, total, color }: StatCard) 
   );
 }
 
-function FacebookPageCard({ page }: { page: FacebookPage }) {
+function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
   const navigate = useNavigate();
   const handleClick = () => {
     navigate('/moderation/posts');
   };
-
   return (
     <div
       className="cursor-pointer bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors"
@@ -136,12 +135,20 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{page.metrics.followers.toLocaleString()}</span>
+                  <span>
+                    {data
+                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      ?.follower_count?.toLocaleString()}
+                  </span>
                 </div>
-                {/* <div className="flex items-center gap-1 text-sm text-gray-600">
+                <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Heart className="w-4 h-4" />
-                  <span>{page.metrics.likes.toLocaleString()}</span>
-                </div> */}
+                  <span>
+                    {data
+                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      ?.fan_count?.toLocaleString()}
+                  </span>
+                </div>
               </div>
               <p className="text-sm text-gray-500 mt-1">{page.category}</p>
             </div>
@@ -218,16 +225,18 @@ function ResourcePage() {
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
   const [stats, setStats] = useState<StatCard[]>([]);
-  const [statsV2, setStatsV2] = useState<StatCard[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [pageIds, setPageIds] = useState<string[]>([]);
-
   const getStats = async (ids = pageIds) => {
     try {
-      const response = await axios.post(`${BaseUrl}/resources`, {
-        user_id: JSON.parse(user || '{}')?.user_id,
-        facebook_fanpage_id: ids,
+      const response = await axios.get(`${BaseUrl}/facebook-connection`, {
+        params: {
+          user_id: JSON.parse(user || '{}')?.user_id,
+          status: 'connected',
+        },
       });
       const data = response.data.data;
+      setData(data);
       // setStats([
       //   {
       //     title: 'Fanpages Đã Kết Nối',
@@ -449,7 +458,7 @@ function ResourcePage() {
         ) : filteredPages.length > 0 ? (
           <div className="space-y-3">
             {filteredPages.map((page) => (
-              <FacebookPageCard key={page.id} page={page} />
+              <FacebookPageCard key={page.id} page={page} data={data} />
             ))}
           </div>
         ) : (
