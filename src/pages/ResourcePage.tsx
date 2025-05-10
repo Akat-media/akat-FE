@@ -272,6 +272,12 @@ function ResourcePage() {
       getStats(pageIds);
     }
   }, [pageIds]);
+  const formatNumber = (price: any) => {
+    if (!price) price = 0;
+    const val: any = (price / 1).toFixed(0).replace('.', ',');
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+  // console.log(formatNumber(10000));
   const fetchPages = async () => {
     try {
       setLoading(true);
@@ -293,25 +299,27 @@ function ResourcePage() {
         },
         {
           title: 'Tổng Số Người Theo Dõi',
-          value: connections?.reduce((acc: any, cur: any) => acc + cur?.follows, 0),
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.follows, 0)),
           icon: Users,
           color: 'green',
         },
         {
           title: 'Tổng Lượt Tương Tác',
-          value: connections?.reduce((acc: any, cur: any) => acc + cur?.interactions, 0),
+          value: formatNumber(
+            connections?.reduce((acc: any, cur: any) => acc + cur?.interactions, 0)
+          ),
           icon: MessageCircleHeart,
           color: 'red',
         },
         {
           title: 'Tổng Lượt Tiếp Cận',
-          value: connections?.reduce((acc: any, cur: any) => acc + cur?.approach, 0),
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.approach, 0)),
           icon: Eye,
           color: 'yellow',
         },
         {
           title: 'Tổng Số Bài Đăng',
-          value: connections?.reduce((acc: any, cur: any) => acc + cur?.posts, 0),
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.posts, 0)),
           icon: FileText,
           color: 'purple',
         },
