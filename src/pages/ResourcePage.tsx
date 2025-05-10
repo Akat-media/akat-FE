@@ -138,10 +138,10 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
                   <Users className="w-4 h-4" />
                   <span>{page.metrics.followers.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
+                {/* <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Heart className="w-4 h-4" />
                   <span>{page.metrics.likes.toLocaleString()}</span>
-                </div>
+                </div> */}
               </div>
               <p className="text-sm text-gray-500 mt-1">{page.category}</p>
             </div>
@@ -218,6 +218,7 @@ function ResourcePage() {
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
   const [stats, setStats] = useState<StatCard[]>([]);
+  const [statsV2, setStatsV2] = useState<StatCard[]>([]);
   const [pageIds, setPageIds] = useState<string[]>([]);
 
   const getStats = async (ids = pageIds) => {
@@ -226,42 +227,40 @@ function ResourcePage() {
         user_id: JSON.parse(user || '{}')?.user_id,
         facebook_fanpage_id: ids,
       });
-
       const data = response.data.data;
-
-      setStats([
-        {
-          title: 'Fanpages Đã Kết Nối',
-          value: data.fanpage_count,
-          icon: Facebook,
-          color: 'blue',
-        },
-        {
-          title: 'Tổng Số Người Theo Dõi',
-          value: data.follower_count.toLocaleString(),
-          icon: Users,
-          total: data.fan_count.toLocaleString(),
-          color: 'green',
-        },
-        {
-          title: 'Tổng Lượt Tương Tác',
-          value: data.interactions.toLocaleString(),
-          icon: MessageCircleHeart,
-          color: 'red',
-        },
-        {
-          title: 'Tổng Lượt Tiếp Cận',
-          value: data.approach.toLocaleString(),
-          icon: Eye,
-          color: 'yellow',
-        },
-        {
-          title: 'Tổng Số Bài Đăng',
-          value: data.posts,
-          icon: FileText,
-          color: 'purple',
-        },
-      ]);
+      // setStats([
+      //   {
+      //     title: 'Fanpages Đã Kết Nối',
+      //     value: data.fanpage_count,
+      //     icon: Facebook,
+      //     color: 'blue',
+      //   },
+      //   {
+      //     title: 'Tổng Số Người Theo Dõi',
+      //     value: data.follower_count.toLocaleString(),
+      //     icon: Users,
+      //     // total: data.fan_count.toLocaleString(),
+      //     color: 'green',
+      //   },
+      //   {
+      //     title: 'Tổng Lượt Tương Tác',
+      //     value: data.interactions.toLocaleString(),
+      //     icon: MessageCircleHeart,
+      //     color: 'red',
+      //   },
+      //   {
+      //     title: 'Tổng Lượt Tiếp Cận',
+      //     value: data.approach.toLocaleString(),
+      //     icon: Eye,
+      //     color: 'yellow',
+      //   },
+      //   {
+      //     title: 'Tổng Số Bài Đăng',
+      //     value: data.posts,
+      //     icon: FileText,
+      //     color: 'purple',
+      //   },
+      // ]);
     } catch (error) {
       console.error('Error fetching stats:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
@@ -273,11 +272,6 @@ function ResourcePage() {
       getStats(pageIds);
     }
   }, [pageIds]);
-
-  useEffect(() => {
-    fetchPages();
-  }, []);
-
   const fetchPages = async () => {
     try {
       setLoading(true);
@@ -288,9 +282,40 @@ function ResourcePage() {
           user_id: JSON.parse(user || '{}')?.user_id,
         },
       });
-
       const connections = response.data.data;
 
+      setStats([
+        {
+          title: 'Fanpages Đã Kết Nối',
+          value: connections?.length || 0,
+          icon: Facebook,
+          color: 'blue',
+        },
+        {
+          title: 'Tổng Số Người Theo Dõi',
+          value: connections?.reduce((acc: any, cur: any) => acc + cur?.follows, 0),
+          icon: Users,
+          color: 'green',
+        },
+        {
+          title: 'Tổng Lượt Tương Tác',
+          value: connections?.reduce((acc: any, cur: any) => acc + cur?.interactions, 0),
+          icon: MessageCircleHeart,
+          color: 'red',
+        },
+        {
+          title: 'Tổng Lượt Tiếp Cận',
+          value: connections?.reduce((acc: any, cur: any) => acc + cur?.approach, 0),
+          icon: Eye,
+          color: 'yellow',
+        },
+        {
+          title: 'Tổng Số Bài Đăng',
+          value: connections?.reduce((acc: any, cur: any) => acc + cur?.posts, 0),
+          icon: FileText,
+          color: 'purple',
+        },
+      ]);
       const transformedPages: FacebookPage[] =
         connections?.map((conn: any) => ({
           id: conn.facebook_fanpage_id,
@@ -310,7 +335,6 @@ function ResourcePage() {
         })) || [];
 
       setPages(transformedPages);
-
       const ids = transformedPages.map((page) => page.id);
       setPageIds(ids);
     } catch (err) {
@@ -320,7 +344,9 @@ function ResourcePage() {
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    fetchPages();
+  }, []);
   const filteredPages = pages.filter(
     (page) =>
       page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
