@@ -9,6 +9,7 @@ import {
   Filter,
   ChevronDown,
   X,
+  ImagePlus,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -42,7 +43,9 @@ function PostManagementPage() {
   const [fanpages, setFanpages] = useState<any[]>([]);
   const [total, setTotal] = useState<any>(0);
   const { currentPage, pageSize, handleChange, setCurrentPage, setPageSize } = usePagination(1, 12);
-
+  const [selectedPost, setSelectedPost] = useState<{ content: string; images: string[] } | null>(
+    null
+  );
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -325,35 +328,73 @@ function PostManagementPage() {
                         </div>
                       </div>
 
-                      {/* Image */}
-                      <div className="relative h-48 overflow-hidden">
-                        <img
-                          src={getFirstImage(post.post_avatar_url) || defaultImage}
-                          alt="Post image"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                        <button className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-bookmark w-4 h-4 text-gray-700"
-                          >
-                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
-                          </svg>
-                        </button>
-                      </div>
+                      {post.post_avatar_url && (
+                        <div
+                          className="relative h-48 overflow-hidden cursor-pointer"
+                          onClick={() => {
+                            try {
+                              const images = JSON.parse(post.post_avatar_url);
+                              setSelectedPost({
+                                content: post.content,
+                                images: Array.isArray(images) ? images : [post.post_avatar_url],
+                              });
+                            } catch (e) {
+                              console.error('Error parsing post_avatar_url:', e);
+                              setSelectedPost({
+                                content: post.content,
+                                images: [post.post_avatar_url],
+                              });
+                            }
+                          }}
+                        >
+                          <img
+                            src={getFirstImage(post.post_avatar_url)}
+                            alt="Post image"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                          {(() => {
+                            try {
+                              const images = JSON.parse(post.post_avatar_url);
+                              if (Array.isArray(images) && images.length > 1) {
+                                return (
+                                  <button className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors">
+                                    <ImagePlus className="w-4 h-4 text-gray-700" />
+                                  </button>
+                                );
+                              }
+                            } catch (e) {
+                              console.error('Error parsing post_avatar_url:', e);
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
 
                       {/* Content */}
-                      <div className="p-4 flex-1">
-                        <p className="text-sm text-gray-800 line-clamp-3 mb-3">
+                      <div
+                        className="p-4 flex-1 flex items-center justify-center cursor-pointer"
+                        onClick={() => {
+                          try {
+                            const images = JSON.parse(post.post_avatar_url);
+                            setSelectedPost({
+                              content: post.content,
+                              images: Array.isArray(images) ? images : [post.post_avatar_url],
+                            });
+                          } catch (e) {
+                            console.error('Error parsing post_avatar_url:', e);
+                            setSelectedPost({
+                              content: post.content,
+                              images: post.post_avatar_url ? [post.post_avatar_url] : [],
+                            });
+                          }
+                        }}
+                      >
+                        <p
+                          className={`text-sm text-gray-800 break-words ${
+                            post.post_avatar_url ? 'line-clamp-5' : ''
+                          }`}
+                        >
                           {post.content || '[Không có nội dung]'}
                         </p>
                       </div>
@@ -489,6 +530,57 @@ function PostManagementPage() {
           <ContentModeration onClose={() => setShowContentModeration(false)} />
         )}
       </div>
+
+      {/* Modal xem chi tiết bài đăng */}
+      {selectedPost && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedPost(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg p-4 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Chi tiết bài đăng:</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setSelectedPost(null)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center mb-4">
+              <p className="text-gray-800 text-sm text-center">
+                {selectedPost.content || '[Không có nội dung]'}
+              </p>
+            </div>
+            {selectedPost.images &&
+              selectedPost.images.length > 0 &&
+              (selectedPost.images.length === 1 ? (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={selectedPost.images[0]}
+                    alt="Post image"
+                    className="w-auto h-auto max-w-full max-h-[60vh] rounded-lg object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedPost.images.map((image, index) => (
+                    <img
+                      key={index}
+                      src={image}
+                      alt={`Post image ${index + 1}`}
+                      className="w-full h-auto rounded-lg object-cover"
+                    />
+                  ))}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
