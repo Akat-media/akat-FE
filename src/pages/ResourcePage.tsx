@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   MessageSquare,
@@ -17,10 +17,10 @@ import {
   Heart,
   MessageCircleHeart,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import axios from 'axios';
-import { BaseUrl } from '../constants';
 import { useNavigate } from 'react-router-dom';
+import debounce from 'lodash.debounce';
+import { BaseUrl } from '../constants';
 
 interface StatCard {
   title: string;
@@ -49,6 +49,10 @@ interface FacebookPage {
   };
   status: string;
   image_url?: string;
+  follows: number;
+  interactions: number;
+  approach: number;
+  posts: number;
 }
 
 type DateRange = '7' | '30' | '90';
@@ -209,6 +213,7 @@ function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
@@ -219,8 +224,9 @@ function ResourcePage() {
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [pages, setPages] = useState<FacebookPage[]>([]);
+  const [query, setQuery] = useState<string>('');
+  const [pages, setPages] = useState<FacebookPage[]>([]); // Lưu tất cả page
+  const [results, setResults] = useState<FacebookPage[]>([]); // Lưu page hiển thị
   const [showAddPage, setShowAddPage] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
@@ -237,50 +243,12 @@ function ResourcePage() {
       });
       const data = response.data.data;
       setData(data);
-      // setStats([
-      //   {
-      //     title: 'Fanpages Đã Kết Nối',
-      //     value: data.fanpage_count,
-      //     icon: Facebook,
-      //     color: 'blue',
-      //   },
-      //   {
-      //     title: 'Tổng Số Người Theo Dõi',
-      //     value: data.follower_count.toLocaleString(),
-      //     icon: Users,
-      //     // total: data.fan_count.toLocaleString(),
-      //     color: 'green',
-      //   },
-      //   {
-      //     title: 'Tổng Lượt Tương Tác',
-      //     value: data.interactions.toLocaleString(),
-      //     icon: MessageCircleHeart,
-      //     color: 'red',
-      //   },
-      //   {
-      //     title: 'Tổng Lượt Tiếp Cận',
-      //     value: data.approach.toLocaleString(),
-      //     icon: Eye,
-      //     color: 'yellow',
-      //   },
-      //   {
-      //     title: 'Tổng Số Bài Đăng',
-      //     value: data.posts,
-      //     icon: FileText,
-      //     color: 'purple',
-      //   },
-      // ]);
     } catch (error) {
       console.error('Error fetching stats:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
     }
   };
 
-  useEffect(() => {
-    if (pageIds.length > 0) {
-      getStats(pageIds);
-    }
-  }, [pageIds]);
   const formatNumber = (price: any) => {
     if (!price) price = 0;
     const val: any = (price / 1).toFixed(0).replace('.', ',');
@@ -352,6 +320,7 @@ function ResourcePage() {
         })) || [];
 
       setPages(transformedPages);
+      setResults(transformedPages);
       const ids = transformedPages.map((page) => page.id);
       setPageIds(ids);
     } catch (err) {
@@ -361,15 +330,79 @@ function ResourcePage() {
       setLoading(false);
     }
   };
+
+  const search = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setResults(pages); // Hiển thị tất cả page khi query rỗng
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get(`${BaseUrl}/resources/search`, {
+        params: { query: searchQuery },
+      });
+      // Chuyển đổi Page thành FacebookPage để khớp với results
+      const transformedResults: FacebookPage[] = response.data.data.map((page: FacebookPage) => ({
+        id: page.id,
+        name: page.name,
+        category: page.category,
+        status: page.status,
+        metrics: {
+          followers: page.follows || 0,
+          engagement: page.interactions,
+          reach: page.approach,
+          posts: page.posts,
+
+        },
+        image_url: page.image_url,
+      }));
+      setResults(transformedResults);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to fetch results');
+    } finally {
+      setLoading(false);
+    }
+  }, [pages]);
+
+  const debouncedSearch = useCallback(
+    debounce((searchQuery: string) => {
+      search(searchQuery);
+    }, 500),
+    [search]
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    debouncedSearch(newQuery);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      debouncedSearch.cancel();
+      search(query);
+    }
+  };
+
   useEffect(() => {
     fetchPages();
   }, []);
-  const filteredPages = pages.filter(
-    (page) =>
-      page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      page.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
+  useEffect(() => {
+    if (pageIds.length > 0) {
+      getStats(pageIds);
+    }
+  }, [pageIds]);
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+console.log("results: ",results)
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -426,8 +459,9 @@ function ResourcePage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm trang..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={query}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
               />
             </div>
@@ -455,9 +489,9 @@ function ResourcePage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
-        ) : filteredPages.length > 0 ? (
+        ) : results.length > 0 ? (
           <div className="space-y-3">
-            {filteredPages.map((page) => (
+            {results.map((page) => (
               <FacebookPageCard key={page.id} page={page} data={data} />
             ))}
           </div>
