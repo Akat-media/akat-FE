@@ -76,10 +76,12 @@ function ConnectedPages({
   pages,
   loading,
   setRefreshKey,
+  fanPages,
 }: {
   pages: ConnectedPage[];
   loading: boolean;
   setRefreshKey: Dispatch<SetStateAction<number>>;
+  fanPages: any;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState<string | null>(null);
@@ -95,12 +97,11 @@ function ConnectedPages({
         .then((res) => setRefreshKey((prev) => prev + 1))
         .catch((err) => setRefreshKey((prev) => prev + 1));
       setPageToDelete(null);
-      
-      await axios
-        .post(`${BaseUrl}/facebook-page-insight/connection`, {
-            facebook_fanpage_id: page.facebook_fanpage_id,
-            user_id: page.user_id,
-        })
+
+      await axios.post(`${BaseUrl}/facebook-page-insight/connection`, {
+        facebook_fanpage_id: page.facebook_fanpage_id,
+        user_id: page.user_id,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to disconnect page');
     } finally {
@@ -171,7 +172,8 @@ function ConnectedPages({
                 </div>
                 <div>
                   <h3 className="font-medium">
-                    {page.page_name}
+                    {fanPages?.find((item: any) => item?.id == page?.facebook_fanpage_id)
+                      ?.page_name || ''}
                     {page.page_type && (
                       <span
                         className={`ml-2 text-xs px-2 py-0.5 rounded-full ${

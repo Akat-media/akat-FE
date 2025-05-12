@@ -26,6 +26,8 @@ import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { toast } from 'react-toastify';
+import ListPostSchedule from './content-management/post-managenment/ListPostSchedule.tsx';
 
 interface Page {
   id: string;
@@ -42,6 +44,9 @@ interface ScheduledPost {
     avatar?: string;
   };
   status: 'pending' | 'published' | 'failed';
+  posted_at: string;
+  page_name: string;
+  post_avatar_url: string;
 }
 
 function PostSchedule() {
@@ -55,6 +60,20 @@ function PostSchedule() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dataPostDraft, setDataPostDraft] = useState<any>([]);
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+
+  // thêm state để lưu trữ ngày nào đang mở rộng
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+  // hàm toggle trạng thái mở rộng của một ngày
+  const toggleExpand = (dateKey: string) => {
+    setExpandedDates((prev) => ({
+      ...prev,
+      [dateKey]: !prev[dateKey],
+    }));
+  };
+  const [openScheduleModal, setOpenScheduleModal] = useState(false);
+  const [dataListPosts, setDataListPosts] = useState<any>([]);
+  const [modalDate, setModalDate] = useState<string | null>(null);
+  const [modalPosts, setModalPosts] = useState<ScheduledPost[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,7 +188,6 @@ function PostSchedule() {
   };
   const renderWeek = () => {
     const days = getWeekDays(selectedDate);
-    console.log('days', days);
     return (
       <div className="grid grid-cols-7 gap-2 mb-2">
         {days.map((day, index) => (
@@ -186,51 +204,63 @@ function PostSchedule() {
             </div>
           </div>
         ))}
-        {days.map((day, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg p-2 min-h-[200px]">
-            {dataPostDraft
-              ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
-              ?.list.map((post: any) => (
-                <div
-                  key={post?.id}
-                  className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <h5 className="font-normal text-[14px] text-gray-900 mb-1">{post?.page_name}</h5>
+        {days.map((day, index) => {
+          return (
+            <div
+              key={index}
+              className="border border-gray-200 rounded-lg p-2 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            >
+              {dataPostDraft
+                ?.find((item: any) => item.date == format(day, 'yyyy-MM-dd'))
+                ?.list.map((post: any) => (
                   <div
-                    className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                    key={post?.id}
+                    className="mb-2 p-2 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
                   >
-                    {typeof post.post_avatar_url == 'string' && (
-                      <img
-                        src={post.post_avatar_url}
-                        alt="Post thumbnail"
-                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
-                      />
-                    )}
-                    {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
-                      <img
-                        src={post.post_avatar_url?.[0]}
-                        alt="Post thumbnail"
-                        className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-xs font-medium text-gray-500">
-                          {format(post.posted_at, 'yyyy-MM-dd')}
-                        </span>
-                        {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
-                        {post.status === 'published' && (
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                        )}
-                        {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                    <h5 className="font-normal text-[14px] text-gray-900 mb-1 truncate">
+                      {post?.page_name}
+                    </h5>
+                    <div
+                      className={`flex ${showPostRelease ? 'flex-col' : 'flex-row'} items-start gap-2`}
+                    >
+                      {typeof post.post_avatar_url === 'string' && (
+                        <img
+                          src={post.post_avatar_url}
+                          alt="Post thumbnail"
+                          className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                        />
+                      )}
+                      {Array.isArray(post.post_avatar_url) && post.post_avatar_url.length > 0 && (
+                        <img
+                          src={post.post_avatar_url?.[0]}
+                          alt="Post thumbnail"
+                          className={` ${showPostRelease ? 'w-full' : 'w-12'} h-12 rounded object-cover`}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-medium text-gray-500">
+                            {format(post.posted_at, 'yyyy-MM-dd')}
+                          </span>
+                          {post.status === 'pending' && <Clock className="w-3 h-3 text-blue-500" />}
+                          {post.status === 'published' && (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          )}
+                          {post.status === 'failed' && <XCircle className="w-3 h-3 text-red-500" />}
+                        </div>
+                        <div>
+                          <span className="text-xs font-medium text-gray-500">
+                            {format(parseISO(post.posted_at), 'HH:mm')}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
                     </div>
+                    <p className="text-sm text-gray-800 truncate">{post.content}</p>
                   </div>
-                </div>
-              ))}
-          </div>
-        ))}
+                ))}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -238,22 +268,33 @@ function PostSchedule() {
     const days = getDaysInMonth(selectedDate);
     return (
       <div className="grid grid-cols-7 gap-1">
+        {/* Tiêu đề thứ */}
         {daysInWeek.map((day) => (
           <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
             {day}
           </div>
         ))}
-        {days.map((date, index) => {
-          if (!date) {
-            return <div key={`empty-${index}`} className="p-2 min-h-[100px]" />;
-          }
+
+        {/* Duyệt từng ngày */}
+        {days.map((date, idx) => {
+          if (!date) return <div key={idx} className="p-2 min-h-[100px]" />;
+
+          const dateKey = format(date, 'yyyy-MM-dd');
+          // tìm danh sách bài của ngày này
+          const dayData = dataPostDraft.find((item: any) => item.date === dateKey);
+          const posts = dayData?.list || [];
+          const isExpanded = expandedDates[dateKey] || false;
+          // nếu chưa mở rộng thì chỉ lấy 1 bài
+          const postsToShow = isExpanded ? posts : posts.slice(0, 1);
+
           return (
             <div
-              key={date.getTime()}
+              key={dateKey}
               className={`p-2 min-h-[100px] rounded-lg transition-all ${
                 isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
               }`}
             >
+              {/* Ngày và label “Hôm nay” */}
               <div
                 className={`text-sm font-medium mb-2 flex items-center justify-between ${
                   isToday(date) ? 'text-blue-600' : ''
@@ -266,34 +307,65 @@ function PostSchedule() {
                   </span>
                 )}
               </div>
+
+              {/* Hiển thị các bài */}
               <div className="space-y-1">
-                {dataPostDraft
-                  ?.find((item: any) => item.date == format(date, 'yyyy-MM-dd'))
-                  ?.list.map((post: any) => (
-                    <button
-                      key={post.id}
-                      onClick={() => setSelectedPost(post)}
-                      className={`w-full text-left p-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                        post.status === 'published'
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : post.status === 'failed'
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                      }`}
-                    >
-                      <Clock className="w-3 h-3" />
-                      <span className="truncate flex-1">
-                        {format(parseISO(post?.posted_at), 'HH:mm')} - {post?.page_name}
-                      </span>
-                    </button>
-                  ))}
+                {postsToShow.map((post: ScheduledPost) => (
+                  <button
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className={`w-full text-left p-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
+                      post.status === 'published'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : post.status === 'failed'
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span className="truncate flex-1">
+                      {format(parseISO(post.posted_at), 'HH:mm')} – {post.page_name}
+                    </span>
+                  </button>
+                ))}
+
+                {/* Nút Show more / Show less */}
+                {posts.length > 1 && (
+                  <button
+                    onClick={() => {
+                      // lưu ngày và danh sách posts tương ứng vào state
+                      setModalDate(dateKey);
+                      setModalPosts(posts);
+                      setOpenScheduleModal(true);
+                    }}
+                    className="text-blue-600 text-xs font-medium mt-1 hover:underline"
+                  >
+                    Hiển thị thêm
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
+
+        {/* Page Selector Modal */}
+        {openScheduleModal && (
+          <ListPostSchedule
+            date={modalDate}
+            posts={modalPosts}
+            onPageSelect={(page) => {
+              setSelectedPage(page);
+              setOpenScheduleModal(false);
+              setShowNewPost(true);
+            }}
+            data={dataListPage}
+            onClose={() => setOpenScheduleModal(false)}
+          />
+        )}
       </div>
     );
   };
+
   const [images, setImages] = useState<any>([]);
   const [files, setFiles] = useState<any>([]);
   const [postDate, setPostDate] = useState('');
@@ -309,6 +381,11 @@ function PostSchedule() {
       setFiles((prev: any) => [...prev, ...files]);
     }
   };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+  };
+
   function createFormData(data: any) {
     const formData = new FormData();
     for (const [key, value] of Object.entries(data)) {
@@ -317,9 +394,7 @@ function PostSchedule() {
       }
       if (Array.isArray(value)) {
         for (let i = 0; i < value.length; i++) {
-          for (let i = 0; i < value.length; i++) {
-            formData.append('files', value[i]);
-          }
+          formData.append('files', value[i]);
         }
       }
     }
@@ -356,6 +431,17 @@ function PostSchedule() {
       setPostTime('');
       setContent('');
       setShowNewPost(false);
+      toast.success('Lên lịch đăng thành công!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+
+      await handleCallApi();
     } catch (error) {
       setImages([]);
       setFiles([]);
@@ -554,14 +640,31 @@ function PostSchedule() {
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
                   {images.length > 0 && (
+                    // <div className="mt-4 flex flex-wrap gap-3">
+                    //   {images.map((img: any, index: any) => (
+                    //     <img
+                    //       key={index}
+                    //       src={img}
+                    //       alt={`upload-${index}`}
+                    //       className="w-32 h-32 object-cover rounded-lg"
+                    //     />
+                    //   ))}
+                    // </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                       {images.map((img: any, index: any) => (
-                        <img
-                          key={index}
-                          src={img}
-                          alt={`upload-${index}`}
-                          className="w-32 h-32 object-cover rounded-lg"
-                        />
+                        <div key={index} className="relative w-32 h-32">
+                          <img
+                            src={img}
+                            alt={`upload-${index}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}

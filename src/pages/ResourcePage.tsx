@@ -20,6 +20,7 @@ import {
 import { supabase } from '../lib/supabase';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { useNavigate } from 'react-router-dom';
 
 interface StatCard {
   title: string;
@@ -98,9 +99,16 @@ function StatCard({ title, value, icon: Icon, change, total, color }: StatCard) 
   );
 }
 
-function FacebookPageCard({ page }: { page: FacebookPage }) {
+function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate('/moderation/posts');
+  };
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors">
+    <div
+      className="cursor-pointer bg-white rounded-lg border border-gray-200 overflow-hidden hover:bg-gray-50 transition-colors"
+      onClick={handleClick}
+    >
       <div className="p-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -127,11 +135,19 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Users className="w-4 h-4" />
-                  <span>{page.metrics.followers.toLocaleString()}</span>
+                  <span>
+                    {data
+                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      ?.follower_count?.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Heart className="w-4 h-4" />
-                  <span>{page.metrics.likes.toLocaleString()}</span>
+                  <span>
+                    {data
+                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      ?.fan_count?.toLocaleString()}
+                  </span>
                 </div>
               </div>
               <p className="text-sm text-gray-500 mt-1">{page.category}</p>
@@ -199,6 +215,7 @@ function FacebookPageCard({ page }: { page: FacebookPage }) {
 }
 
 function ResourcePage() {
+  const navigate = useNavigate();
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -208,50 +225,51 @@ function ResourcePage() {
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
   const [stats, setStats] = useState<StatCard[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [pageIds, setPageIds] = useState<string[]>([]);
-
   const getStats = async (ids = pageIds) => {
     try {
-      const response = await axios.post(`${BaseUrl}/resources`, {
-        user_id: JSON.parse(user || '{}')?.user_id,
-        facebook_fanpage_id: ids,
+      const response = await axios.get(`${BaseUrl}/facebook-connection`, {
+        params: {
+          user_id: JSON.parse(user || '{}')?.user_id,
+          status: 'connected',
+        },
       });
-
       const data = response.data.data;
-
-      setStats([
-        {
-          title: 'Fanpages Đã Kết Nối',
-          value: data.fanpage_count,
-          icon: Facebook,
-          color: 'blue',
-        },
-        {
-          title: 'Tổng Số Người Theo Dõi',
-          value: data.follower_count.toLocaleString(),
-          icon: Users,
-          total: data.fan_count.toLocaleString(),
-          color: 'green',
-        },
-        {
-          title: 'Tổng Lượt Tương Tác',
-          value: data.interactions.toLocaleString(),
-          icon: MessageCircleHeart,
-          color: 'red',
-        },
-        {
-          title: 'Tổng Lượt Tiếp Cận',
-          value: data.approach.toLocaleString(),
-          icon: Eye,
-          color: 'yellow',
-        },
-        {
-          title: 'Tổng Số Bài Đăng',
-          value: data.posts,
-          icon: FileText,
-          color: 'purple',
-        },
-      ]);
+      setData(data);
+      // setStats([
+      //   {
+      //     title: 'Fanpages Đã Kết Nối',
+      //     value: data.fanpage_count,
+      //     icon: Facebook,
+      //     color: 'blue',
+      //   },
+      //   {
+      //     title: 'Tổng Số Người Theo Dõi',
+      //     value: data.follower_count.toLocaleString(),
+      //     icon: Users,
+      //     // total: data.fan_count.toLocaleString(),
+      //     color: 'green',
+      //   },
+      //   {
+      //     title: 'Tổng Lượt Tương Tác',
+      //     value: data.interactions.toLocaleString(),
+      //     icon: MessageCircleHeart,
+      //     color: 'red',
+      //   },
+      //   {
+      //     title: 'Tổng Lượt Tiếp Cận',
+      //     value: data.approach.toLocaleString(),
+      //     icon: Eye,
+      //     color: 'yellow',
+      //   },
+      //   {
+      //     title: 'Tổng Số Bài Đăng',
+      //     value: data.posts,
+      //     icon: FileText,
+      //     color: 'purple',
+      //   },
+      // ]);
     } catch (error) {
       console.error('Error fetching stats:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
@@ -263,11 +281,12 @@ function ResourcePage() {
       getStats(pageIds);
     }
   }, [pageIds]);
-
-  useEffect(() => {
-    fetchPages();
-  }, []);
-
+  const formatNumber = (price: any) => {
+    if (!price) price = 0;
+    const val: any = (price / 1).toFixed(0).replace('.', ',');
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+  // console.log(formatNumber(10000));
   const fetchPages = async () => {
     try {
       setLoading(true);
@@ -278,9 +297,42 @@ function ResourcePage() {
           user_id: JSON.parse(user || '{}')?.user_id,
         },
       });
-
       const connections = response.data.data;
 
+      setStats([
+        {
+          title: 'Fanpages Đã Kết Nối',
+          value: connections?.length || 0,
+          icon: Facebook,
+          color: 'blue',
+        },
+        {
+          title: 'Tổng Số Người Theo Dõi',
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.follows, 0)),
+          icon: Users,
+          color: 'green',
+        },
+        {
+          title: 'Tổng Lượt Tương Tác',
+          value: formatNumber(
+            connections?.reduce((acc: any, cur: any) => acc + cur?.interactions, 0)
+          ),
+          icon: MessageCircleHeart,
+          color: 'red',
+        },
+        {
+          title: 'Tổng Lượt Tiếp Cận',
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.approach, 0)),
+          icon: Eye,
+          color: 'yellow',
+        },
+        {
+          title: 'Tổng Số Bài Đăng',
+          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.posts, 0)),
+          icon: FileText,
+          color: 'purple',
+        },
+      ]);
       const transformedPages: FacebookPage[] =
         connections?.map((conn: any) => ({
           id: conn.facebook_fanpage_id,
@@ -300,7 +352,6 @@ function ResourcePage() {
         })) || [];
 
       setPages(transformedPages);
-
       const ids = transformedPages.map((page) => page.id);
       setPageIds(ids);
     } catch (err) {
@@ -310,7 +361,9 @@ function ResourcePage() {
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    fetchPages();
+  }, []);
   const filteredPages = pages.filter(
     (page) =>
       page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -386,7 +439,10 @@ function ResourcePage() {
               <span>Xuất</span>
             </button>
             <button
-              onClick={() => setShowAddPage(true)}
+              onClick={() => {
+                setShowAddPage(true);
+                navigate('/connection');
+              }}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
             >
               <Plus className="w-4 h-4" />
@@ -402,7 +458,7 @@ function ResourcePage() {
         ) : filteredPages.length > 0 ? (
           <div className="space-y-3">
             {filteredPages.map((page) => (
-              <FacebookPageCard key={page.id} page={page} />
+              <FacebookPageCard key={page.id} page={page} data={data} />
             ))}
           </div>
         ) : (

@@ -178,6 +178,7 @@ function ConnectionPage() {
   const [showConnectedPages, setShowConnectedPages] = useState(false);
   const [currentGuide, setCurrentGuide] = useState<string>('default');
   const [pages, setPages] = useState<ConnectedPage[]>([]);
+  const [fanPages, setFanPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   // dem so luong page facebook da ket noi
   useEffect(() => {
@@ -187,14 +188,18 @@ function ConnectionPage() {
   const fetchConnectedPagesCount = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${BaseUrl}/facebook-connection`, {
-        params: {
-          user_id: JSON.parse(user || '{}')?.user_id,
-          status: 'connected',
-        },
-      });
+      const [response, response2] = await Promise.all([
+        axios.get(`${BaseUrl}/facebook-connection`, {
+          params: {
+            user_id: JSON.parse(user || '{}')?.user_id,
+            status: 'connected',
+          },
+        }),
+        axios.get(`${BaseUrl}/facebook-fan-page`),
+      ]);
 
       setPages(response.data.data || []);
+      setFanPages(response2.data.data || []);
       setConnectedPagesCount(response.data.data.length || 0);
     } catch (err) {
       console.error('Error fetching connected pages count:', err);
@@ -444,7 +449,14 @@ function ConnectionPage() {
 
     // Trường hợp đang hiển thị danh sách trang đã kết nối
     if (showConnectedPages) {
-      return <ConnectedPages setRefreshKey={setRefreshKey} pages={pages} loading={loading} />;
+      return (
+        <ConnectedPages
+          setRefreshKey={setRefreshKey}
+          pages={pages}
+          loading={loading}
+          fanPages={fanPages}
+        />
+      );
     }
 
     // Trường hợp mặc định - hiển thị các nút tùy chọn
