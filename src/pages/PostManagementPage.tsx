@@ -160,6 +160,22 @@ function PostManagementPage() {
 
     return defaultImage;
   }
+  function parseAvatarUrls(input: any): string[] {
+    if (!input || typeof input !== 'string') return [];
+
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (e) {
+      if (typeof input === 'string' && input.startsWith('http')) {
+        return [input];
+      }
+    }
+
+    return [];
+  }
 
   return (
     <div className="px-6 py-4">
@@ -357,7 +373,7 @@ function PostManagementPage() {
                           className="relative h-48 overflow-hidden cursor-pointer"
                           onClick={() => {
                             try {
-                              const images = JSON.parse(post.post_avatar_url);
+                              const images = parseAvatarUrls(post.post_avatar_url);
                               setSelectedPost({
                                 content: post.content,
                                 images: Array.isArray(images) ? images : [post.post_avatar_url],
@@ -366,7 +382,7 @@ function PostManagementPage() {
                               console.error('Error parsing post_avatar_url:', e);
                               setSelectedPost({
                                 content: post.content,
-                                images: [post.post_avatar_url],
+                                images: parseAvatarUrls(post.post_avatar_url),
                               });
                             }
                           }}
@@ -379,8 +395,8 @@ function PostManagementPage() {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                           {(() => {
                             try {
-                              const images = JSON.parse(post.post_avatar_url);
-                              if (Array.isArray(images) && images.length > 1) {
+                              const images = parseAvatarUrls(post.post_avatar_url);
+                              if (images.length > 1) {
                                 return (
                                   <button className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors">
                                     <ImagePlus className="w-4 h-4 text-gray-700" />
