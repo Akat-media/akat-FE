@@ -213,7 +213,6 @@ function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -225,8 +224,8 @@ function ResourcePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<string>('');
-  const [pages, setPages] = useState<FacebookPage[]>([]); // Lưu tất cả page
-  const [results, setResults] = useState<FacebookPage[]>([]); // Lưu page hiển thị
+  const [pages, setPages] = useState<FacebookPage[]>([]);
+  const [results, setResults] = useState<FacebookPage[]>([]);
   const [showAddPage, setShowAddPage] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
@@ -273,26 +272,27 @@ function ResourcePage() {
 
       const connections = response.data.data;
 
-      const transformedPages: FacebookPage[] = connections?.map((conn: any) => ({
-        id: conn.id, // Đổi từ facebook_fanpage_id thành id để khớp với API mới
-        name: conn.name || 'Unnamed Page',
-        verified: true, // API không trả verified, giữ mặc định như cũ
-        category: conn.category || 'Unknown',
-        metrics: {
-          followers: conn.follows || 0,
-          likes: 0, // API không trả likes, giữ mặc định
-          engagement: conn.interactions || 0,
-          reach: conn.approach || 0,
-          responseRate: 94.8, // Giá trị cứng như code cũ
+      const transformedPages: FacebookPage[] =
+        connections?.map((conn: any) => ({
+          id: conn.id,
+          name: conn.name || 'Unnamed Page',
+          verified: true,
+          category: conn.category || 'Unknown',
+          metrics: {
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions || 0,
+            reach: conn.approach || 0,
+            responseRate: 94.8,
+            posts: conn.posts || 0,
+          },
+          status: conn.status || 'Không hoạt động',
+          image_url: conn.image_url,
+          follows: conn.follows || 0,
+          interactions: conn.interactions || 0,
+          approach: conn.approach || 0,
           posts: conn.posts || 0,
-        },
-        status: conn.status || 'Không hoạt động',
-        image_url: conn.image_url,
-        follows: conn.follows || 0,
-        interactions: conn.interactions || 0,
-        approach: conn.approach || 0,
-        posts: conn.posts || 0,
-      })) || [];
+        })) || [];
 
       setPages(transformedPages);
       setResults(transformedPages);
@@ -367,26 +367,27 @@ function ResourcePage() {
 
         const connections = response.data.data;
 
-        const transformedResults: FacebookPage[] = connections?.map((conn: any) => ({
-          id: conn.id,
-          name: conn.name || 'Unnamed Page',
-          verified: true,
-          category: conn.category || 'Unknown',
-          metrics: {
-            followers: conn.follows || 0,
-            likes: 0,
-            engagement: conn.interactions || 0,
-            reach: conn.approach || 0,
-            responseRate: 94.8,
+        const transformedResults: FacebookPage[] =
+          connections?.map((conn: any) => ({
+            id: conn.id,
+            name: conn.name || 'Unnamed Page',
+            verified: true,
+            category: conn.category || 'Unknown',
+            metrics: {
+              followers: conn.follows || 0,
+              likes: 0,
+              engagement: conn.interactions || 0,
+              reach: conn.approach || 0,
+              responseRate: 94.8,
+              posts: conn.posts || 0,
+            },
+            status: conn.status || 'Không hoạt động',
+            image_url: conn.image_url,
+            follows: conn.follows || 0,
+            interactions: conn.interactions || 0,
+            approach: conn.approach || 0,
             posts: conn.posts || 0,
-          },
-          status: conn.status || 'Không hoạt động',
-          image_url: conn.image_url,
-          follows: conn.follows || 0,
-          interactions: conn.interactions || 0,
-          approach: conn.approach || 0,
-          posts: conn.posts || 0,
-        })) || [];
+          })) || [];
 
         setResults(transformedResults);
       } catch (error) {
