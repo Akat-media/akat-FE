@@ -46,16 +46,22 @@ function PostManagementPage() {
   const [selectedPost, setSelectedPost] = useState<{ content: string; images: string[] } | null>(
     null
   );
+  const [setting, setSetting] = useState<any>(null);
+  const [refresh, setRefresh] = useState<any>(null);
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
       setError(null);
-      const pageResponse = await axios.get(`${BaseUrl}/facebook-page-insight`, {
-        params: {
-          user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
-        },
-      });
+      const [pageResponse, resSetting] = await Promise.all([
+        axios.get(`${BaseUrl}/facebook-page-insight`, {
+          params: {
+            user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
+          },
+        }),
+        axios.get(`${BaseUrl}/config-moderation`),
+      ]);
       const pages = pageResponse.data.data || [];
+      setSetting(resSetting.data.data || {});
       setFanpages(pages);
     } catch (err) {
       console.error('Lỗi khi tải danh sách bài viết:', err);
@@ -66,7 +72,7 @@ function PostManagementPage() {
   };
   useEffect(() => {
     fetchPostsFromConnectedPages();
-  }, []);
+  }, [refresh]);
   const handleCallPost = async () => {
     setLoading(true);
     try {
@@ -527,7 +533,11 @@ function PostManagementPage() {
         )}
         {/* Modal tien ich: kiem duyet noi dung */}
         {showContentModeration && (
-          <ContentModeration onClose={() => setShowContentModeration(false)} />
+          <ContentModeration
+            setRefresh={setRefresh}
+            data={setting}
+            onClose={() => setShowContentModeration(false)}
+          />
         )}
       </div>
 
