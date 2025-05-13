@@ -234,6 +234,7 @@ function ResourcePage() {
   const [stats, setStats] = useState<StatCard[]>([]);
   const [data, setData] = useState<any[]>([]);
   const [pageIds, setPageIds] = useState<string[]>([]);
+  const [totalStats, setTotalStats] = useState<StatCard[]>([]);
   const getStats = async (ids = pageIds) => {
     try {
       const response = await axios.get(`${BaseUrl}/facebook-connection`, {
@@ -306,40 +307,7 @@ function ResourcePage() {
       setPageIds(ids);
 
       // Cập nhật stats
-      setStats([
-        {
-          title: 'Fanpages Đã Kết Nối',
-          value: connections?.length || 0,
-          icon: Facebook,
-          color: 'blue',
-        },
-        {
-          title: 'Tổng Số Người Theo Dõi',
-          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.follows, 0)),
-          icon: Users,
-          color: 'green',
-        },
-        {
-          title: 'Tổng Lượt Tương Tác',
-          value: formatNumber(
-            connections?.reduce((acc: any, cur: any) => acc + cur?.interactions, 0)
-          ),
-          icon: MessageCircleHeart,
-          color: 'red',
-        },
-        {
-          title: 'Tổng Lượt Tiếp Cận',
-          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.approach, 0)),
-          icon: Eye,
-          color: 'yellow',
-        },
-        {
-          title: 'Tổng Số Bài Đăng',
-          value: formatNumber(connections?.reduce((acc: any, cur: any) => acc + cur?.posts, 0)),
-          icon: FileText,
-          color: 'purple',
-        },
-      ]);
+
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
@@ -347,6 +315,68 @@ function ResourcePage() {
       setLoading(false);
     }
   };
+
+  const getTotalStats = async () => {
+    const userId = JSON.parse(user || '{}')?.user_id;
+    if (!userId) {
+      throw new Error('User ID not found');
+    }
+
+    let allPages: any[] = [];
+    let page = 1;
+    const pageSize = 20;
+    let totalCount = 0;
+
+    // Lặp để lấy tất cả page
+    do {
+      const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+        params: {
+          user_id: userId,
+          page,
+          pageSize,
+        },
+      });
+
+      const connections = response.data.data.data || [];
+      totalCount = response.data.data.totalCount || 0;
+      allPages = [...allPages, ...connections]; // nối các phan tử mới của mảng connections vào mảng allPages, same: allPages.concat(connections)
+      page++;
+    } while (allPages.length < totalCount);
+
+    // console.log("connection stats", allPages);
+    setTotalStats([
+      {
+        title: 'Fanpages Đã Kết Nối',
+        value: allPages.length || 0,
+        icon: Facebook,
+        color: 'blue',
+      },
+      {
+        title: 'Tổng Số Người Theo Dõi',
+        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.follows || 0), 0)),
+        icon: Users,
+        color: 'green',
+      },
+      {
+        title: 'Tổng Lượt Tương Tác',
+        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.interactions || 0), 0)),
+        icon: MessageCircleHeart,
+        color: 'red',
+      },
+      {
+        title: 'Tổng Lượt Tiếp Cận',
+        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.approach || 0), 0)),
+        icon: Eye,
+        color: 'yellow',
+      },
+      {
+        title: 'Tổng Số Bài Đăng',
+        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.posts || 0), 0)),
+        icon: FileText,
+        color: 'purple',
+      },
+    ]);
+  }
 
   const search = useCallback(
     async (searchQuery: string) => {
@@ -438,6 +468,10 @@ function ResourcePage() {
   }, [pageIds]);
 
   useEffect(() => {
+    getTotalStats();
+  },[])
+
+  useEffect(() => {
     return () => {
       debouncedSearch.cancel();
     };
@@ -481,7 +515,7 @@ function ResourcePage() {
 
       {/* Stats Dashboard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat, index) => (
+        {totalStats.map((stat, index) => (
           <StatCard key={index} {...stat} />
         ))}
       </div>

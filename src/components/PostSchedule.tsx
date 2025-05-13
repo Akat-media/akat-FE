@@ -89,7 +89,7 @@ function PostSchedule() {
           },
         }),
       ]);
-      setDataListPage(pageResponse.data.data || []);
+      setDataListPage(pageResponse.data.data.data || []);
     } catch (err) {
       console.error('Lỗi khi tải danh sách bài viết:', err);
       setError('Không thể tải bài viết. Vui lòng thử lại sau.');
