@@ -21,6 +21,8 @@ import { Pagination } from 'antd';
 import usePagination from '../hook/usePagination.tsx';
 import { debounce } from 'lodash';
 import defaultImage from '../../public/default-avatar.jpg';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
@@ -28,6 +30,9 @@ const PageSelector = lazy(() => import('../components/PageSelector'));
 
 function PostManagementPage() {
   const [loading, setLoading] = useState(false);
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [selectedPostComments, setSelectedPostComments] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -104,6 +109,25 @@ function PostManagementPage() {
     }, 1500),
     []
   );
+
+  const fetchCommentsByPostId = async (postId: string, accessToken: string) => {
+    try {
+      setGlobalLoading(true);
+      setError(null);
+      const response = await axios.get(
+        `https://graph.facebook.com/v22.0/${postId}/comments?access_token=${accessToken}`
+      );
+      setComments(response.data.data || []);
+      setSelectedPostComments(postId);
+    } catch (error) {
+      console.error('Lỗi khi tải bình luận:', error);
+      toast.error('Không thể tải bình luận 😭');
+      setTimeout(() => navigate('/moderation/posts'), 3000);
+    } finally {
+      setGlobalLoading(false);
+    }
+  };
+
   useEffect(() => {
     debouncedHandleCallPost(searchQuery);
     return () => {
@@ -135,6 +159,22 @@ function PostManagementPage() {
     }
 
     return defaultImage;
+  }
+  function parseAvatarUrls(input: any): string[] {
+    if (!input || typeof input !== 'string') return [];
+
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (e) {
+      if (typeof input === 'string' && input.startsWith('http')) {
+        return [input];
+      }
+    }
+
+    return [];
   }
 
   return (
@@ -333,7 +373,7 @@ function PostManagementPage() {
                           className="relative h-48 overflow-hidden cursor-pointer"
                           onClick={() => {
                             try {
-                              const images = JSON.parse(post.post_avatar_url);
+                              const images = parseAvatarUrls(post.post_avatar_url);
                               setSelectedPost({
                                 content: post.content,
                                 images: Array.isArray(images) ? images : [post.post_avatar_url],
@@ -342,7 +382,7 @@ function PostManagementPage() {
                               console.error('Error parsing post_avatar_url:', e);
                               setSelectedPost({
                                 content: post.content,
-                                images: [post.post_avatar_url],
+                                images: parseAvatarUrls(post.post_avatar_url),
                               });
                             }
                           }}
@@ -355,8 +395,8 @@ function PostManagementPage() {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
                           {(() => {
                             try {
-                              const images = JSON.parse(post.post_avatar_url);
-                              if (Array.isArray(images) && images.length > 1) {
+                              const images = parseAvatarUrls(post.post_avatar_url);
+                              if (images.length > 1) {
                                 return (
                                   <button className="absolute top-2 right-2 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors">
                                     <ImagePlus className="w-4 h-4 text-gray-700" />
@@ -401,7 +441,19 @@ function PostManagementPage() {
 
                       {/* Footer */}
                       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        <div
+                          className="flex items-center gap-4"
+                          onClick={() => {
+                            const accessToken = fanpages.find(
+                              (fanpage) => fanpage.facebook_fanpage_id === post.facebook_fanpage_id
+                            )?.access_token;
+                            if (accessToken) {
+                              fetchCommentsByPostId(post.id, accessToken);
+                            } else {
+                              console.error('Không tìm thấy access_token cho fanpage này.');
+                            }
+                          }}
+                        >
                           <div className="flex items-center gap-1 text-gray-500">
                             <FaThumbsUp className="w-4 h-4" />
                             <span className="text-xs font-medium">{post.likes || 0}</span>
@@ -578,6 +630,56 @@ function PostManagementPage() {
                   ))}
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {globalLoading && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+          <Loader2 className="w-12 h-12 animate-spin text-white" />
+        </div>
+      )}
+
+      {selectedPostComments && !loading && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedPostComments(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg p-4 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Bình luận:</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setSelectedPostComments(null)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {error ? (
+              <div className="text-center text-red-500">{error}</div>
+            ) : comments.length > 0 ? (
+              <ul className="space-y-4">
+                {comments.map((comment, index) => (
+                  <li
+                    key={comment.id}
+                    className={`pb-2 border-b px-3 py-2 rounded ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-20'
+                    }`}
+                  >
+                    <div className="text-base font-semibold text-gray-800">
+                      {comment.from?.name || 'Người dùng ẩn danh'}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">{comment.message}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center text-gray-500">Không có bình luận nào</div>
+            )}
           </div>
         </div>
       )}
