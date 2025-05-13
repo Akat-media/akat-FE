@@ -65,7 +65,7 @@ function PostManagementPage() {
         }),
         axios.get(`${BaseUrl}/config-moderation`),
       ]);
-      const pages = pageResponse.data.data || [];
+      const pages = pageResponse.data.data.data || [];
       setSetting(resSetting.data.data || {});
       setFanpages(pages);
     } catch (err) {
