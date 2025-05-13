@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   MessageSquare,
@@ -17,10 +17,10 @@ import {
   Heart,
   MessageCircleHeart,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import axios from 'axios';
-import { BaseUrl } from '../constants';
 import { useNavigate } from 'react-router-dom';
+import debounce from 'lodash.debounce';
+import { BaseUrl } from '../constants';
 
 interface StatCard {
   title: string;
@@ -49,6 +49,10 @@ interface FacebookPage {
   };
   status: string;
   image_url?: string;
+  follows: number;
+  interactions: number;
+  approach: number;
+  posts: number;
 }
 
 type DateRange = '7' | '30' | '90';
@@ -219,8 +223,9 @@ function ResourcePage() {
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState<string>('');
   const [pages, setPages] = useState<FacebookPage[]>([]);
+  const [results, setResults] = useState<FacebookPage[]>([]);
   const [showAddPage, setShowAddPage] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30');
@@ -237,50 +242,12 @@ function ResourcePage() {
       });
       const data = response.data.data;
       setData(data);
-      // setStats([
-      //   {
-      //     title: 'Fanpages Đã Kết Nối',
-      //     value: data.fanpage_count,
-      //     icon: Facebook,
-      //     color: 'blue',
-      //   },
-      //   {
-      //     title: 'Tổng Số Người Theo Dõi',
-      //     value: data.follower_count.toLocaleString(),
-      //     icon: Users,
-      //     // total: data.fan_count.toLocaleString(),
-      //     color: 'green',
-      //   },
-      //   {
-      //     title: 'Tổng Lượt Tương Tác',
-      //     value: data.interactions.toLocaleString(),
-      //     icon: MessageCircleHeart,
-      //     color: 'red',
-      //   },
-      //   {
-      //     title: 'Tổng Lượt Tiếp Cận',
-      //     value: data.approach.toLocaleString(),
-      //     icon: Eye,
-      //     color: 'yellow',
-      //   },
-      //   {
-      //     title: 'Tổng Số Bài Đăng',
-      //     value: data.posts,
-      //     icon: FileText,
-      //     color: 'purple',
-      //   },
-      // ]);
     } catch (error) {
       console.error('Error fetching stats:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
     }
   };
 
-  useEffect(() => {
-    if (pageIds.length > 0) {
-      getStats(pageIds);
-    }
-  }, [pageIds]);
   const formatNumber = (price: any) => {
     if (!price) price = 0;
     const val: any = (price / 1).toFixed(0).replace('.', ',');
@@ -292,13 +259,47 @@ function ResourcePage() {
       setLoading(true);
       setError(null);
 
+      const userId = JSON.parse(user || '{}')?.user_id;
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
       const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
         params: {
-          user_id: JSON.parse(user || '{}')?.user_id,
+          user_id: userId,
         },
       });
+
       const connections = response.data.data;
 
+      const transformedPages: FacebookPage[] =
+        connections?.map((conn: any) => ({
+          id: conn.id,
+          name: conn.name || 'Unnamed Page',
+          verified: true,
+          category: conn.category || 'Unknown',
+          metrics: {
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions || 0,
+            reach: conn.approach || 0,
+            responseRate: 94.8,
+            posts: conn.posts || 0,
+          },
+          status: conn.status || 'Không hoạt động',
+          image_url: conn.image_url,
+          follows: conn.follows || 0,
+          interactions: conn.interactions || 0,
+          approach: conn.approach || 0,
+          posts: conn.posts || 0,
+        })) || [];
+
+      setPages(transformedPages);
+      setResults(transformedPages);
+      const ids = transformedPages.map((page) => page.id);
+      setPageIds(ids);
+
+      // Cập nhật stats
       setStats([
         {
           title: 'Fanpages Đã Kết Nối',
@@ -333,27 +334,6 @@ function ResourcePage() {
           color: 'purple',
         },
       ]);
-      const transformedPages: FacebookPage[] =
-        connections?.map((conn: any) => ({
-          id: conn.facebook_fanpage_id,
-          name: conn.name || 'Unnamed Page',
-          verified: true,
-          category: conn.category || 'Unknown',
-          metrics: {
-            followers: conn.follows || 0,
-            likes: 0,
-            engagement: conn.interactions,
-            reach: conn.approach,
-            responseRate: 94.8,
-            posts: conn.posts,
-          },
-          status: conn.status,
-          image_url: conn.image_url,
-        })) || [];
-
-      setPages(transformedPages);
-      const ids = transformedPages.map((page) => page.id);
-      setPageIds(ids);
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
@@ -361,14 +341,100 @@ function ResourcePage() {
       setLoading(false);
     }
   };
+
+  const search = useCallback(
+    async (searchQuery: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const userId = JSON.parse(user || '{}')?.user_id;
+        if (!userId) {
+          throw new Error('User ID not found');
+        }
+
+        if (!searchQuery.trim()) {
+          setResults(pages); // Hiển thị tất cả page khi query rỗng
+          return;
+        }
+
+        const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+          params: {
+            user_id: userId,
+            query: searchQuery,
+          },
+        });
+
+        const connections = response.data.data;
+
+        const transformedResults: FacebookPage[] =
+          connections?.map((conn: any) => ({
+            id: conn.id,
+            name: conn.name || 'Unnamed Page',
+            verified: true,
+            category: conn.category || 'Unknown',
+            metrics: {
+              followers: conn.follows || 0,
+              likes: 0,
+              engagement: conn.interactions || 0,
+              reach: conn.approach || 0,
+              responseRate: 94.8,
+              posts: conn.posts || 0,
+            },
+            status: conn.status || 'Không hoạt động',
+            image_url: conn.image_url,
+            follows: conn.follows || 0,
+            interactions: conn.interactions || 0,
+            approach: conn.approach || 0,
+            posts: conn.posts || 0,
+          })) || [];
+
+        setResults(transformedResults);
+      } catch (error) {
+        console.error('Error searching pages:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch results');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pages, user]
+  );
+
+  const debouncedSearch = useCallback(
+    debounce((searchQuery: string) => {
+      search(searchQuery);
+    }, 500),
+    [search]
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    debouncedSearch(newQuery);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      debouncedSearch.cancel();
+      search(query);
+    }
+  };
+
   useEffect(() => {
     fetchPages();
   }, []);
-  const filteredPages = pages.filter(
-    (page) =>
-      page.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      page.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+
+  useEffect(() => {
+    if (pageIds.length > 0) {
+      getStats(pageIds);
+    }
+  }, [pageIds]);
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -426,8 +492,9 @@ function ResourcePage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm trang..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={query}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
               />
             </div>
@@ -455,9 +522,9 @@ function ResourcePage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
-        ) : filteredPages.length > 0 ? (
+        ) : results.length > 0 ? (
           <div className="space-y-3">
-            {filteredPages.map((page) => (
+            {results.map((page) => (
               <FacebookPageCard key={page.id} page={page} data={data} />
             ))}
           </div>
