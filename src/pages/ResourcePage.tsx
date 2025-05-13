@@ -260,13 +260,46 @@ function ResourcePage() {
       setLoading(true);
       setError(null);
 
+      const userId = JSON.parse(user || '{}')?.user_id;
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
       const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
         params: {
-          user_id: JSON.parse(user || '{}')?.user_id,
+          user_id: userId,
         },
       });
+
       const connections = response.data.data;
 
+      const transformedPages: FacebookPage[] = connections?.map((conn: any) => ({
+        id: conn.id, // Đổi từ facebook_fanpage_id thành id để khớp với API mới
+        name: conn.name || 'Unnamed Page',
+        verified: true, // API không trả verified, giữ mặc định như cũ
+        category: conn.category || 'Unknown',
+        metrics: {
+          followers: conn.follows || 0,
+          likes: 0, // API không trả likes, giữ mặc định
+          engagement: conn.interactions || 0,
+          reach: conn.approach || 0,
+          responseRate: 94.8, // Giá trị cứng như code cũ
+          posts: conn.posts || 0,
+        },
+        status: conn.status || 'Không hoạt động',
+        image_url: conn.image_url,
+        follows: conn.follows || 0,
+        interactions: conn.interactions || 0,
+        approach: conn.approach || 0,
+        posts: conn.posts || 0,
+      })) || [];
+
+      setPages(transformedPages);
+      setResults(transformedPages);
+      const ids = transformedPages.map((page) => page.id);
+      setPageIds(ids);
+
+      // Cập nhật stats
       setStats([
         {
           title: 'Fanpages Đã Kết Nối',
@@ -301,28 +334,6 @@ function ResourcePage() {
           color: 'purple',
         },
       ]);
-      const transformedPages: FacebookPage[] =
-        connections?.map((conn: any) => ({
-          id: conn.facebook_fanpage_id,
-          name: conn.name || 'Unnamed Page',
-          verified: true,
-          category: conn.category || 'Unknown',
-          metrics: {
-            followers: conn.follows || 0,
-            likes: 0,
-            engagement: conn.interactions,
-            reach: conn.approach,
-            responseRate: 94.8,
-            posts: conn.posts,
-          },
-          status: conn.status,
-          image_url: conn.image_url,
-        })) || [];
-
-      setPages(transformedPages);
-      setResults(transformedPages);
-      const ids = transformedPages.map((page) => page.id);
-      setPageIds(ids);
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
@@ -331,41 +342,62 @@ function ResourcePage() {
     }
   };
 
-  const search = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setResults(pages); // Hiển thị tất cả page khi query rỗng
-      return;
-    }
+  const search = useCallback(
+    async (searchQuery: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    setLoading(true);
-    setError(null);
+        const userId = JSON.parse(user || '{}')?.user_id;
+        if (!userId) {
+          throw new Error('User ID not found');
+        }
 
-    try {
-      const response = await axios.get(`${BaseUrl}/resources/search`, {
-        params: { query: searchQuery },
-      });
-      // Chuyển đổi Page thành FacebookPage để khớp với results
-      const transformedResults: FacebookPage[] = response.data.data.map((page: FacebookPage) => ({
-        id: page.id,
-        name: page.name,
-        category: page.category,
-        status: page.status,
-        metrics: {
-          followers: page.follows || 0,
-          engagement: page.interactions,
-          reach: page.approach,
-          posts: page.posts,
+        if (!searchQuery.trim()) {
+          setResults(pages); // Hiển thị tất cả page khi query rỗng
+          return;
+        }
 
-        },
-        image_url: page.image_url,
-      }));
-      setResults(transformedResults);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to fetch results');
-    } finally {
-      setLoading(false);
-    }
-  }, [pages]);
+        const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+          params: {
+            user_id: userId,
+            query: searchQuery,
+          },
+        });
+
+        const connections = response.data.data;
+
+        const transformedResults: FacebookPage[] = connections?.map((conn: any) => ({
+          id: conn.id,
+          name: conn.name || 'Unnamed Page',
+          verified: true,
+          category: conn.category || 'Unknown',
+          metrics: {
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions || 0,
+            reach: conn.approach || 0,
+            responseRate: 94.8,
+            posts: conn.posts || 0,
+          },
+          status: conn.status || 'Không hoạt động',
+          image_url: conn.image_url,
+          follows: conn.follows || 0,
+          interactions: conn.interactions || 0,
+          approach: conn.approach || 0,
+          posts: conn.posts || 0,
+        })) || [];
+
+        setResults(transformedResults);
+      } catch (error) {
+        console.error('Error searching pages:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch results');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pages, user]
+  );
 
   const debouncedSearch = useCallback(
     debounce((searchQuery: string) => {
@@ -402,7 +434,7 @@ function ResourcePage() {
       debouncedSearch.cancel();
     };
   }, [debouncedSearch]);
-console.log("results: ",results)
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
