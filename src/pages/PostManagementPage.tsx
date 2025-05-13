@@ -23,6 +23,7 @@ import { debounce } from 'lodash';
 import defaultImage from '../../public/default-avatar.jpg';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { io } from 'socket.io-client';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
@@ -51,6 +52,7 @@ function PostManagementPage() {
   const [selectedPost, setSelectedPost] = useState<{ content: string; images: string[] } | null>(
     null
   );
+  const [socket, setSocket] = useState<any>(null);
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -140,6 +142,23 @@ function PostManagementPage() {
       handleCallPost();
     }
   }, [fanpages, currentPage, pageSize, selectedFanpage, search]);
+
+  // Thử nha
+  useEffect(() => {
+    // Kết nối tới server Socket.IO
+    const socketInstance = io('http://localhost:3000'); // Thay bằng URL server của bạn
+    setSocket(socketInstance);
+
+    // Lắng nghe sự kiện từ server
+    socketInstance.on('notification', (message: string) => {
+      toast.info(message); // Hiển thị thông báo
+    });
+
+    // Ngắt kết nối khi component bị unmount
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, []);
 
   const { innerBorderRef } = useOnOutsideClick(() => setShowFanpageDropdown(false));
   function getFirstImage(input: any) {

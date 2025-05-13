@@ -313,7 +313,7 @@ function PostSchedule() {
                 {postsToShow.map((post: ScheduledPost) => (
                   <button
                     key={post.id}
-                    onClick={() => setSelectedPost(post)}
+                    // onClick={() => setSelectedPost(post)}
                     className={`w-full text-left p-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
                       post.status === 'published'
                         ? 'bg-green-100 text-green-700 hover:bg-green-200'

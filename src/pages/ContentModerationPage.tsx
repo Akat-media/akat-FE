@@ -4,15 +4,16 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Settings,
   RefreshCw,
   Eye,
   EyeOff,
   Shield,
   MessageSquare,
-  Mail,
   ChevronLeft,
   ChevronRight,
+  Settings,
+  Route,
+  Send,
 } from 'lucide-react';
 import { useMonitoringStore } from '../store/monitoringStore';
 import {
@@ -49,12 +50,46 @@ function ContentModerationPage() {
   const [autoCorrectEnabled, setAutoCorrectEnabled] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [showToggleConfirm, setShowToggleConfirm] = useState<string | null>(null);
-  //  const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [emails, setEmails] = useState<string[]>(['admin@example.com']);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [loadingAutoHide, setLoadingAutoHide] = useState(false);
   const [loadingAutoCorrect, setLoadingAutoCorrect] = useState(false);
+  const [hidePost, setHidePost] = useState(false);
+  const [editContent, setEditContent] = useState(false);
+  const [notifyAdmin, setNotifyAdmin] = useState(false);
+  const [email, setEmail] = useState('akamedia@gmail.com');
+  const [volume, setVolume] = useState(90);
+
+  const defaultPrompt =
+    'You are a content moderation system for Facebook posts. Your task is to analyze the content of posts and determine if they violate community standards.\n' +
+    '\n' +
+    'Analyze the post for the following violations:\n' +
+    '1. Hate speech or discrimination\n' +
+    '2. Violence or threats\n' +
+    '3. Nudity or sexual content\n' +
+    '4. Harassment or bullying\n' +
+    '5. Spam or misleading content\n' +
+    '6. Illegal activities\n' +
+    '7. Self-harm or suicide\n' +
+    '8. Misinformation\n' +
+    '\n' +
+    'Respond with a JSON object in the following format:\n' +
+    '{\n' +
+    '"violates": boolean,\n' +
+    '"category": string or null,\n' +
+    '"reason": string or null,\n' +
+    '"confidence": number between 0 and 1\n' +
+    '}\n' +
+    '\n' +
+    'Where:\n' +
+    '- "violates" is true if the post violates community standards, false otherwise\n' +
+    '- "category" is the category of violation (one of the 8 listed above), or null if no violation\n' +
+    '- "reason" is a brief explanation of why the post violates standards, or null if no violation\n' +
+    '- "confidence" is your confidence level in the assessment (0.0 to 1.0)\n' +
+    '\n' +
+    'Be thorough but fair in your assessment. If you are unsure, err on the side of caution.';
+  const [prompt, setPrompt] = useState(defaultPrompt);
 
   const toggleAutoHide = async () => {
     const newState = !autoHideEnabled;
@@ -269,6 +304,10 @@ function ContentModerationPage() {
     ));
   };
 
+  const onClose = () => {
+    console.log('Đã nhấn nút Hủy');
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[50vh]">
@@ -343,7 +382,7 @@ function ContentModerationPage() {
                             e.stopPropagation(); // block sự kiện onClick của parent
                             togglePageMonitoring(page.id);
                           }}
-                          className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                          className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-red-600"
                         >
                           {page.isMonitored ? 'Tạm dừng' : 'Kích hoạt'}
                         </button>
@@ -560,172 +599,275 @@ function ContentModerationPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Settings className="w-5 h-5 text-blue-500" />
-              Cài đặt kiểm duyệt
-            </h2>
-
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-100 rounded-lg shadow-sm">
             <div className="space-y-6">
-              <div>
-                <label className="flex items-center justify-between mb-2">
-                  <span className="font-medium">Tự động ẩn bài vi phạm</span>
-                  <button
-                    onClick={toggleAutoHide}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                      autoHideEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}
-                    disabled={loadingAutoHide}
-                  >
-                    {loadingAutoHide ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : autoHideEnabled ? (
-                      'Đang bật'
+              <div className="space-y-4">
+                <h2 className="font-medium mb-3 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-500" />
+                  Cấu hình kiểm duyệt nội dung
+                </h2>
+
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <h3 className="font-medium">Tự động kiểm duyệt</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Tự động kiểm duyệt nội dung bài viết và bình luận
+                    </p>
+                  </div>
+                  <button onClick={toggleAutoHide} className="flex items-center">
+                    {autoHideEnabled ? (
+                      // Bật
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-10 h-10 text-blue-500"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                        <circle cx="16" cy="12" r="2"></circle>
+                      </svg>
                     ) : (
-                      'Đang tắt'
+                      // Tắt
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-10 h-10 text-gray-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                        <circle cx="8" cy="12" r="2"></circle>
+                      </svg>
                     )}
                   </button>
-                </label>
-                <p className="text-sm text-gray-600">
-                  Tự động ẩn bài viết khi phát hiện vi phạm với độ tin cậy cao
-                </p>
-              </div>
+                </div>
 
-              <div>
-                <label className="flex items-center justify-between mb-2">
-                  <span className="font-medium">Tự động sửa nội dung</span>
-                  <button
-                    onClick={toggleAutoCorrect}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                      autoCorrectEnabled
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                    disabled={loadingAutoCorrect}
-                  >
-                    {loadingAutoCorrect ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : autoCorrectEnabled ? (
-                      'Đang bật'
-                    ) : (
-                      'Đang tắt'
-                    )}
-                  </button>
-                </label>
-                <p className="text-sm text-gray-600">
-                  Tự động sửa các nội dung vi phạm nhẹ (ngôn từ không phù hợp)
-                </p>
-              </div>
-
-              <div>
-                <label className={`block font-medium mb-2 ${!selectedPage ? 'opacity-50' : ''}`}>
-                  Ngưỡng độ tin cậy để tự động xử lý
-                </label>
-                <div className="space-y-4">
-                  <input
-                    type="range"
-                    min="80"
-                    max="100"
-                    step="5"
-                    value={confidenceThreshold}
-                    disabled={!selectedPage}
-                    onChange={(e) => setConfidenceThreshold(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex justify-between text-sm">
-                    <span
-                      className={`${confidenceThreshold >= 80 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
+                <div>
+                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                    <Route className="w-5 h-5 text-blue-500" />
+                    Hành động tự động
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Tự động ẩn bài vi phạm</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Tự động ẩn bài viết khi phát hiện vi phạm
+                        </p>
+                      </div>
+                      <button onClick={() => setHidePost(!hidePost)} className="text-gray-700">
+                        {hidePost ? (
+                          // Bật
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-blue-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="16" cy="12" r="2"></circle>
+                          </svg>
+                        ) : (
+                          // Tắt
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-gray-400"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="8" cy="12" r="2"></circle>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Tự động sửa nội dung</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Tự động sửa các nội dung vi phạm nhẹ
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setEditContent(!editContent)}
+                        className="text-gray-700"
+                      >
+                        {editContent ? (
+                          // Bật
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-blue-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="16" cy="12" r="2"></circle>
+                          </svg>
+                        ) : (
+                          // Tắt
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-gray-400"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="8" cy="12" r="2"></circle>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">Thông báo cho quản trị viên</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Gửi email thông báo khi phát hiện vi phạm
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setNotifyAdmin(!notifyAdmin)}
+                        className="text-gray-700"
+                      >
+                        {notifyAdmin ? (
+                          // Bật
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-blue-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="16" cy="12" r="2"></circle>
+                          </svg>
+                        ) : (
+                          // Tắt
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-10 h-10 text-gray-400"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="20" height="12" x="2" y="6" rx="6" ry="6"></rect>
+                            <circle cx="8" cy="12" r="2"></circle>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {/* Phần Email quản trị viên */}
+                    <div
+                      className={`transition-all duration-1000 overflow-hidden ${
+                        notifyAdmin ? 'max-h-[500px] opacity-100 mt-1' : 'max-h-0 opacity-0'
+                      }`}
                     >
-                      80%
-                    </span>
-                    <span
-                      className={`${confidenceThreshold >= 85 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
-                    >
-                      85%
-                    </span>
-                    <span
-                      className={`${confidenceThreshold >= 90 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
-                    >
-                      90%
-                    </span>
-                    <span
-                      className={`${confidenceThreshold >= 95 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
-                    >
-                      95%
-                    </span>
-                    <span
-                      className={`${confidenceThreshold >= 100 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
-                    >
-                      100%
-                    </span>
+                      <h3 className="font-medium mb-3 flex items-center gap-2">
+                        <Send className="w-5 h-5 text-blue-500" />
+                        Email quản trị viên
+                      </h3>
+                      <input
+                        type="email"
+                        className="w-full p-2 border rounded-lg text-gray-500"
+                        placeholder="Nhập email quản trị viên"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
-                {savingConfig && (
-                  <p className="text-sm text-blue-600 mt-2">
-                    <Loader2 className="w-4 h-4 animate-spin inline mr-1" />
-                    Đang xử lý...
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-500" />
-              Email nhận thông báo
-            </h2>
-
-            <div className="space-y-4">
-              {emails.map((email) => (
-                <div
-                  key={email}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  {editingEmail === email ? (
+                <div>
+                  <label className="block font-medium mb-2">
+                    Ngưỡng độ tin cậy để tự động xử lý
+                  </label>
+                  <div className="space-y-4">
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => updateEmail(email, e.target.value)}
-                      onBlur={() => setEditingEmail(null)}
-                      onKeyPress={(e) => e.key === 'Enter' && setEditingEmail(null)}
-                      className="flex-1 p-2 border rounded"
-                      autoFocus
+                      type="range"
+                      min="80"
+                      max="100"
+                      step="5"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      value={volume}
+                      onChange={(e) => setVolume(Number(e.target.value))}
                     />
-                  ) : (
-                    <span>{email}</span>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditingEmail(email)}
-                      className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => removeEmail(email)}
-                      className="px-3 py-1 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      Xóa
-                    </button>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-600 font-medium">80%</span>
+                      <span className="text-blue-600 font-medium">85%</span>
+                      <span className="text-blue-600 font-medium">90%</span>
+                      <span className="text-gray-600">95%</span>
+                      <span className="text-gray-600">100%</span>
+                    </div>
                   </div>
                 </div>
-              ))}
 
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Thêm email mới..."
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className="flex-1 p-2 border rounded-lg"
-                />
-                <button
-                  onClick={addEmail}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                >
-                  Thêm
-                </button>
+                <div>
+                  <label className="block font-medium mb-2">Prompt kiểm duyệt</label>
+                  <textarea
+                    className="w-full p-3 border border-gray-200 rounded-lg h-48 font-mono text-sm"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  ></textarea>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Prompt này sẽ được sử dụng để hướng dẫn AI kiểm duyệt nội dung
+                  </p>
+                </div>
+
+                <div className="flex justify-end mt-5">
+                  <button
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                    onClick={onClose}
+                  >
+                    Hủy
+                  </button>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-save w-4 h-4"
+                    >
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    <span>Lưu thay đổi</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
