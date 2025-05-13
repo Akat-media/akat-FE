@@ -1,46 +1,88 @@
-import React, { useState } from 'react';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
+import { BaseUrl } from '../../../constants';
+import LoadingContent from './LoadingContent';
 
 type Props = {
   onClose: () => void;
+  data?: any;
+  setRefresh: React.Dispatch<any>;
 };
 
-const ContentModeration: React.FC<Props> = ({ onClose }) => {
+const ContentModeration: React.FC<Props> = ({ onClose, data, setRefresh }) => {
+  const [autoModeration, setAutoModeration] = useState(true);
   const [hidePost, setHidePost] = useState(false);
   const [editContent, setEditContent] = useState(false);
   const [notifyAdmin, setNotifyAdmin] = useState(false);
-  const [email, setEmail] = useState('akamedia@gmail.com');
+  const [email, setEmail] = useState('');
   const [volume, setVolume] = useState(90);
-
-  const defaultPrompt =
-    'You are a content moderation system for Facebook posts. Your task is to analyze the content of posts and determine if they violate community standards.\n' +
-    '\n' +
-    'Analyze the post for the following violations:\n' +
-    '1. Hate speech or discrimination\n' +
-    '2. Violence or threats\n' +
-    '3. Nudity or sexual content\n' +
-    '4. Harassment or bullying\n' +
-    '5. Spam or misleading content\n' +
-    '6. Illegal activities\n' +
-    '7. Self-harm or suicide\n' +
-    '8. Misinformation\n' +
-    '\n' +
-    'Respond with a JSON object in the following format:\n' +
-    '{\n' +
-    '"violates": boolean,\n' +
-    '"category": string or null,\n' +
-    '"reason": string or null,\n' +
-    '"confidence": number between 0 and 1\n' +
-    '}\n' +
-    '\n' +
-    'Where:\n' +
-    '- "violates" is true if the post violates community standards, false otherwise\n' +
-    '- "category" is the category of violation (one of the 8 listed above), or null if no violation\n' +
-    '- "reason" is a brief explanation of why the post violates standards, or null if no violation\n' +
-    '- "confidence" is your confidence level in the assessment (0.0 to 1.0)\n' +
-    '\n' +
-    'Be thorough but fair in your assessment. If you are unsure, err on the side of caution.';
-  const [prompt, setPrompt] = useState(defaultPrompt);
-
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (data) {
+      setAutoModeration(data.auto_moderation);
+      setHidePost(data.hide_post_violations);
+      setEditContent(data.edit_minor_content);
+      setNotifyAdmin(data.notify_admin);
+      setEmail(data.admin_email);
+      setVolume(data.threshold);
+      setPrompt(data.prompt || '');
+    }
+  }, []);
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        auto_moderation: autoModeration,
+        edit_minor_content: editContent,
+        hide_post_violations: hidePost,
+        notify_admin: notifyAdmin,
+        admin_email: email,
+        threshold: volume,
+        prompt,
+      };
+      const result = await axios.post(`${BaseUrl}/config-moderation`, payload);
+      if (result.status === 200) {
+        setLoading(false);
+        toast.success('Lưu thành công!', {
+          position: 'top-right',
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+        });
+        setRefresh((prev: any) => !prev);
+      } else {
+        setLoading(false);
+        toast.error('Lưu thất bại!', {
+          position: 'top-right',
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error('Lưu thất bại!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+    }
+  };
+  if (loading) {
+    return <LoadingContent />;
+  }
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
@@ -93,7 +135,12 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" readOnly checked />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    onChange={() => setAutoModeration(!autoModeration)}
+                    checked={autoModeration}
+                  />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
@@ -283,7 +330,10 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
           >
             Hủy
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+          <button
+            onClick={handleSubmit}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -307,5 +357,32 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     </div>
   );
 };
-
+const defaultPrompt =
+  'You are a content moderation system for Facebook posts. Your task is to analyze the content of posts and determine if they violate community standards.\n' +
+  '\n' +
+  'Analyze the post for the following violations:\n' +
+  '1. Hate speech or discrimination\n' +
+  '2. Violence or threats\n' +
+  '3. Nudity or sexual content\n' +
+  '4. Harassment or bullying\n' +
+  '5. Spam or misleading content\n' +
+  '6. Illegal activities\n' +
+  '7. Self-harm or suicide\n' +
+  '8. Misinformation\n' +
+  '\n' +
+  'Respond with a JSON object in the following format:\n' +
+  '{\n' +
+  '"violates": boolean,\n' +
+  '"category": string or null,\n' +
+  '"reason": string or null,\n' +
+  '"confidence": number between 0 and 1\n' +
+  '}\n' +
+  '\n' +
+  'Where:\n' +
+  '- "violates" is true if the post violates community standards, false otherwise\n' +
+  '- "category" is the category of violation (one of the 8 listed above), or null if no violation\n' +
+  '- "reason" is a brief explanation of why the post violates standards, or null if no violation\n' +
+  '- "confidence" is your confidence level in the assessment (0.0 to 1.0)\n' +
+  '\n' +
+  'Be thorough but fair in your assessment. If you are unsure, err on the side of caution.';
 export default ContentModeration;
