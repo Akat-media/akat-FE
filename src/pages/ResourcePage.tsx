@@ -21,6 +21,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import debounce from 'lodash.debounce';
 import { BaseUrl } from '../constants';
+import usePagination from '../hook/usePagination.tsx';
+import { Pagination } from 'antd';
 
 interface StatCard {
   title: string;
@@ -247,6 +249,8 @@ function ResourcePage() {
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
     }
   };
+  const { currentPage, pageSize, handleChange, setCurrentPage, setPageSize } = usePagination(1, 2);
+  const [total, setTotal] = useState<any>(0);
 
   const formatNumber = (price: any) => {
     if (!price) price = 0;
@@ -267,32 +271,34 @@ function ResourcePage() {
       const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
         params: {
           user_id: userId,
+          page: currentPage,
+          pageSize: pageSize,
         },
       });
 
-      const connections = response.data.data;
+      const connections = response.data.data.data;
+      setTotal(response.data.data.totalCount || 0);
 
-      const transformedPages: FacebookPage[] =
-        connections?.map((conn: any) => ({
-          id: conn.id,
-          name: conn.name || 'Unnamed Page',
-          verified: true,
-          category: conn.category || 'Unknown',
-          metrics: {
-            followers: conn.follows || 0,
-            likes: 0,
-            engagement: conn.interactions || 0,
-            reach: conn.approach || 0,
-            responseRate: 94.8,
-            posts: conn.posts || 0,
-          },
-          status: conn.status || 'Không hoạt động',
-          image_url: conn.image_url,
-          follows: conn.follows || 0,
-          interactions: conn.interactions || 0,
-          approach: conn.approach || 0,
+      const transformedPages: FacebookPage[] = connections?.map((conn: any) => ({
+        id: conn.id,
+        name: conn.name || 'Unnamed Page',
+        verified: true,
+        category: conn.category || 'Unknown',
+        metrics: {
+          followers: conn.follows || 0,
+          likes: 0,
+          engagement: conn.interactions || 0,
+          reach: conn.approach || 0,
+          responseRate: 94.8,
           posts: conn.posts || 0,
-        })) || [];
+        },
+        status: conn.status || 'Không hoạt động',
+        image_url: conn.image_url,
+        follows: conn.follows || 0,
+        interactions: conn.interactions || 0,
+        approach: conn.approach || 0,
+        posts: conn.posts || 0,
+      })) || [];
 
       setPages(transformedPages);
       setResults(transformedPages);
@@ -365,31 +371,31 @@ function ResourcePage() {
           },
         });
 
-        const connections = response.data.data;
+        const connections = response.data.data.data;
 
-        const transformedResults: FacebookPage[] =
-          connections?.map((conn: any) => ({
-            id: conn.id,
-            name: conn.name || 'Unnamed Page',
-            verified: true,
-            category: conn.category || 'Unknown',
-            metrics: {
-              followers: conn.follows || 0,
-              likes: 0,
-              engagement: conn.interactions || 0,
-              reach: conn.approach || 0,
-              responseRate: 94.8,
-              posts: conn.posts || 0,
-            },
-            status: conn.status || 'Không hoạt động',
-            image_url: conn.image_url,
-            follows: conn.follows || 0,
-            interactions: conn.interactions || 0,
-            approach: conn.approach || 0,
+        const transformedResults: FacebookPage[] = connections?.map((conn: any) => ({
+          id: conn.id,
+          name: conn.name || 'Unnamed Page',
+          verified: true,
+          category: conn.category || 'Unknown',
+          metrics: {
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions || 0,
+            reach: conn.approach || 0,
+            responseRate: 94.8,
             posts: conn.posts || 0,
-          })) || [];
+          },
+          status: conn.status || 'Không hoạt động',
+          image_url: conn.image_url,
+          follows: conn.follows || 0,
+          interactions: conn.interactions || 0,
+          approach: conn.approach || 0,
+          posts: conn.posts || 0,
+        })) || [];
 
         setResults(transformedResults);
+
       } catch (error) {
         console.error('Error searching pages:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch results');
@@ -399,6 +405,7 @@ function ResourcePage() {
     },
     [pages, user]
   );
+
 
   const debouncedSearch = useCallback(
     debounce((searchQuery: string) => {
@@ -422,7 +429,7 @@ function ResourcePage() {
 
   useEffect(() => {
     fetchPages();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     if (pageIds.length > 0) {
@@ -534,6 +541,15 @@ function ResourcePage() {
             <p className="text-gray-500">Không tìm thấy trang nào</p>
           </div>
         )}
+
+        <div className="mt-4">
+          <Pagination
+            total={total}
+            onChange={handleChange}
+            current={currentPage}
+            pageSize={pageSize}
+          />
+        </div>
       </div>
 
       {/* Modals */}

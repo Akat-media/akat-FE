@@ -60,7 +60,7 @@ function PostManagementPage() {
           user_id: JSON.parse(localStorage.getItem('user') || '{}')?.user_id,
         },
       });
-      const pages = pageResponse.data.data || [];
+      const pages = pageResponse.data.data.data || [];
       setFanpages(pages);
     } catch (err) {
       console.error('Lỗi khi tải danh sách bài viết:', err);
