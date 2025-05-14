@@ -38,6 +38,7 @@ interface StatCard {
 
 interface FacebookPage {
   id: string;
+  facebook_fanpage_id: string;
   name: string;
   verified: boolean;
   category: string;
@@ -143,7 +144,7 @@ function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
                   <Users className="w-4 h-4" />
                   <span>
                     {data
-                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      .find((item: any) => item.facebook_fanpage_id == page.facebook_fanpage_id)
                       ?.follower_count?.toLocaleString()}
                   </span>
                 </div>
@@ -151,7 +152,7 @@ function FacebookPageCard({ page, data }: { page: FacebookPage; data?: any }) {
                   <Heart className="w-4 h-4" />
                   <span>
                     {data
-                      .find((item: any) => item.facebook_fanpage_id == page.id)
+                      .find((item: any) => item.facebook_fanpage_id == page.facebook_fanpage_id)
                       ?.fan_count?.toLocaleString()}
                   </span>
                 </div>
@@ -280,26 +281,28 @@ function ResourcePage() {
       const connections = response.data.data.data;
       setTotal(response.data.data.totalCount || 0);
 
-      const transformedPages: FacebookPage[] = connections?.map((conn: any) => ({
-        id: conn.id,
-        name: conn.name || 'Unnamed Page',
-        verified: true,
-        category: conn.category || 'Unknown',
-        metrics: {
-          followers: conn.follows || 0,
-          likes: 0,
-          engagement: conn.interactions || 0,
-          reach: conn.approach || 0,
-          responseRate: 94.8,
+      const transformedPages: FacebookPage[] =
+        connections?.map((conn: any) => ({
+          id: conn.id,
+          facebook_fanpage_id: conn.facebook_fanpage_id,
+          name: conn.name || 'Unnamed Page',
+          verified: true,
+          category: conn.category || 'Unknown',
+          metrics: {
+            followers: conn.follows || 0,
+            likes: 0,
+            engagement: conn.interactions || 0,
+            reach: conn.approach || 0,
+            responseRate: 94.8,
+            posts: conn.posts || 0,
+          },
+          status: conn.status || 'Không hoạt động',
+          image_url: conn.image_url,
+          follows: conn.follows || 0,
+          interactions: conn.interactions || 0,
+          approach: conn.approach || 0,
           posts: conn.posts || 0,
-        },
-        status: conn.status || 'Không hoạt động',
-        image_url: conn.image_url,
-        follows: conn.follows || 0,
-        interactions: conn.interactions || 0,
-        approach: conn.approach || 0,
-        posts: conn.posts || 0,
-      })) || [];
+        })) || [];
 
       setPages(transformedPages);
       setResults(transformedPages);
@@ -307,7 +310,6 @@ function ResourcePage() {
       setPageIds(ids);
 
       // Cập nhật stats
-
     } catch (err) {
       console.error('Error fetching pages:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages');
@@ -321,62 +323,45 @@ function ResourcePage() {
     if (!userId) {
       throw new Error('User ID not found');
     }
+    const response = await axios.post(`${BaseUrl}/resources`, {
+      user_id: userId,
+    });
 
-    let allPages: any[] = [];
-    let page = 1;
-    const pageSize = 1000;
-    let totalCount = 0;
+    const data = response.data.data;
 
-    // Lặp để lấy tất cả page
-    do {
-      const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
-        params: {
-          user_id: userId,
-          page,
-          pageSize,
-        },
-      });
-
-      const connections = response.data.data.data || [];
-      totalCount = response.data.data.totalCount || 0;
-      allPages = [...allPages, ...connections]; // nối các phan tử mới của mảng connections vào mảng allPages, same: allPages.concat(connections)
-      page++;
-    } while (allPages.length < totalCount);
-
-    // console.log("connection stats", allPages);
     setTotalStats([
       {
         title: 'Fanpages Đã Kết Nối',
-        value: allPages.length || 0,
+        value: data?.fanpage_count || 0,
         icon: Facebook,
         color: 'blue',
       },
       {
         title: 'Tổng Số Người Theo Dõi',
-        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.follows || 0), 0)),
+        value: formatNumber(data?.follows) || 0,
         icon: Users,
         color: 'green',
       },
       {
         title: 'Tổng Lượt Tương Tác',
-        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.interactions || 0), 0)),
+        value: formatNumber(data?.interactions) || 0,
         icon: MessageCircleHeart,
         color: 'red',
       },
       {
         title: 'Tổng Lượt Tiếp Cận',
-        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.approach || 0), 0)),
+        value: formatNumber(data?.approach) || 0,
         icon: Eye,
         color: 'yellow',
       },
       {
         title: 'Tổng Số Bài Đăng',
-        value: formatNumber(allPages.reduce((acc: number, cur: any) => acc + (cur?.posts || 0), 0)),
+        value: formatNumber(data?.posts) || 0,
         icon: FileText,
         color: 'purple',
       },
     ]);
-  }
+  };
 
   const search = useCallback(
     async (searchQuery: string) => {
@@ -403,29 +388,29 @@ function ResourcePage() {
 
         const connections = response.data.data.data;
 
-        const transformedResults: FacebookPage[] = connections?.map((conn: any) => ({
-          id: conn.id,
-          name: conn.name || 'Unnamed Page',
-          verified: true,
-          category: conn.category || 'Unknown',
-          metrics: {
-            followers: conn.follows || 0,
-            likes: 0,
-            engagement: conn.interactions || 0,
-            reach: conn.approach || 0,
-            responseRate: 94.8,
+        const transformedResults: FacebookPage[] =
+          connections?.map((conn: any) => ({
+            id: conn.id,
+            name: conn.name || 'Unnamed Page',
+            verified: true,
+            category: conn.category || 'Unknown',
+            metrics: {
+              followers: conn.follows || 0,
+              likes: 0,
+              engagement: conn.interactions || 0,
+              reach: conn.approach || 0,
+              responseRate: 94.8,
+              posts: conn.posts || 0,
+            },
+            status: conn.status || 'Không hoạt động',
+            image_url: conn.image_url,
+            follows: conn.follows || 0,
+            interactions: conn.interactions || 0,
+            approach: conn.approach || 0,
             posts: conn.posts || 0,
-          },
-          status: conn.status || 'Không hoạt động',
-          image_url: conn.image_url,
-          follows: conn.follows || 0,
-          interactions: conn.interactions || 0,
-          approach: conn.approach || 0,
-          posts: conn.posts || 0,
-        })) || [];
+          })) || [];
 
         setResults(transformedResults);
-
       } catch (error) {
         console.error('Error searching pages:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch results');
@@ -435,7 +420,6 @@ function ResourcePage() {
     },
     [pages, user]
   );
-
 
   const debouncedSearch = useCallback(
     debounce((searchQuery: string) => {
@@ -469,7 +453,7 @@ function ResourcePage() {
 
   useEffect(() => {
     getTotalStats();
-  },[])
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -575,15 +559,16 @@ function ResourcePage() {
             <p className="text-gray-500">Không tìm thấy trang nào</p>
           </div>
         )}
-
-        <div className="mt-4">
-          <Pagination
-            total={total}
-            onChange={handleChange}
-            current={currentPage}
-            pageSize={pageSize}
-          />
-        </div>
+        {total > 0 && (
+          <div className="mt-4">
+            <Pagination
+              total={total}
+              onChange={handleChange}
+              current={currentPage}
+              pageSize={pageSize}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modals */}
