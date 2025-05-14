@@ -250,7 +250,7 @@ function ResourcePage() {
       setError(error instanceof Error ? error.message : 'Failed to fetch stats');
     }
   };
-  const { currentPage, pageSize, handleChange, setCurrentPage, setPageSize } = usePagination(1, 2);
+  const { currentPage, pageSize, handleChange, setCurrentPage, setPageSize } = usePagination(1, 10);
   const [total, setTotal] = useState<any>(0);
 
   const formatNumber = (price: any) => {
@@ -324,7 +324,7 @@ function ResourcePage() {
 
     let allPages: any[] = [];
     let page = 1;
-    const pageSize = 20;
+    const pageSize = 1000;
     let totalCount = 0;
 
     // Lặp để lấy tất cả page
