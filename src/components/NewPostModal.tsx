@@ -29,16 +29,24 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionHistory, setSuggestionHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [ask, setAsk] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const generateSuggestions = async () => {
     try {
+      setSuggestionHistory([]);
       setGeneratingSuggestions(true);
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      setSuggestions([
+      const newSuggestions = [
         '🌟 Mẫu váy mới về, chất liệu cotton 100% mềm mại, thoáng mát. Thiết kế trẻ trung, năng động phù hợp cho mọi dịp. Giá chỉ 299k - Inbox ngay để được tư vấn chi tiết! #ThoStore #VayDep',
         '✨ SALE SHOCK cuối tuần - Giảm giá đến 50% toàn bộ váy đầm. Cơ hội vàng để sở hữu những items thời trang cao cấp với giá cực tốt. Số lượng có hạn - Nhanh tay đặt hàng! 🛍️',
         '🎉 BST Xuân Hè 2024 đã chính thức ra mắt! Đa dạng mẫu mã, kiểu dáng trendy, chất liệu cao cấp. Ưu đãi đặc biệt cho 100 khách hàng đầu tiên. Ghé shop ngay hôm nay! 👗',
-      ]);
+      ];
+      setSuggestions(newSuggestions);
+      setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
       setShowAiSuggestions(true);
     } catch (error) {
       console.error('Error generating suggestions:', error);
@@ -49,7 +57,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
 
   const useSuggestion = (suggestion: string) => {
     setContent(suggestion);
-    setShowAiSuggestions(false);
+    setShowAiSuggestions(true);
+    setVisible(true);
   };
   const [images, setImages] = useState<any>([]);
   const [files, setFiles] = useState<any>([]);
@@ -153,6 +162,36 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleChange = (e: any) => {
+    setAsk(e.target.value);
+  };
+
+  const handleSubmit = () => {
+    if (ask.trim()) {
+      const newSuggestions = [
+        ask,
+        `${ask} - Thêm ưu đãi đặc biệt: Mua 2 tặng 1!`,
+        `${ask} - Nhanh tay đặt hàng để nhận quà tặng hấp dẫn! #KhuyếnMãi`,
+      ];
+
+      setSuggestions(newSuggestions);
+      setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
+      setAsk('');
+      setShowHistory(false);
+      setHasSubmitted(true);
+    }
+  };
+
+  const toggleHistory = () => {
+    setShowHistory((prev) => !prev);
+  };
+
+  const handleClose = () => {
+    setShowAiSuggestions(false);
+    setSuggestionHistory([]);
+
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
@@ -228,7 +267,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
               </div>
             )}
             {/* AI Suggestions */}
-            {!showAiSuggestions ? (
+            {!showAiSuggestions && !visible ? (
               <button
                 onClick={generateSuggestions}
                 disabled={generatingSuggestions}
@@ -254,14 +293,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <h4 className="font-medium">Gợi ý từ AI</h4>
                   </div>
                   <button
-                    onClick={() => setShowAiSuggestions(false)}
+                    onClick={handleClose}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {suggestions.map((suggestion, index) => (
+                  {(showHistory ? suggestionHistory : suggestions).map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => useSuggestion(suggestion)}
@@ -270,6 +309,37 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                       {suggestion}
                     </button>
                   ))}
+                </div>
+
+                {suggestionHistory.length > 1 && hasSubmitted && (
+                  <button
+                    onClick={toggleHistory}
+                    className="w-full p-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
+                  >
+                    {showHistory ? 'Ẩn lịch sử' : 'Xem thêm'}
+                  </button>
+                )}
+                <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6">
+                  <div className="flex flex-col gap-4">
+                    <textarea
+                      value={ask}
+                      onChange={handleChange}
+                      placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
+                      className="w-full h-48 p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-200 resize-y"
+                    />
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-500">
+                        {/*Số ký tự: <span className="font-medium text-blue-600">{ask.length}</span>*/}
+                      </p>
+                      <button
+                        onClick={handleSubmit}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={!ask.trim()}
+                      >
+                        Gửi
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
