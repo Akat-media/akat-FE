@@ -410,7 +410,13 @@ function App() {
         </Routes>
       </Router>
 
-      <ToastContainer />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar
+        closeOnClick
+        pauseOnHover
+      />
     </AuthProvider>
   );
 }
