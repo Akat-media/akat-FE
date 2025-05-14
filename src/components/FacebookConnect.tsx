@@ -68,32 +68,13 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
     page_name: any
   ): Promise<number> => {
     let totalCount = 0;
-    let url = `https://graph.facebook.com/v22.0/${page_id}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0),full_picture,status_type&since=${since}&until=${until}&limit=10&access_token=${token}`;
+    let url = `https://graph.facebook.com/v22.0/${page_id}/posts?fields=id,message,created_time,shares,likes.summary(true).limit(0),comments.summary(true).limit(0),full_picture,status_type&since=${since}&until=${until}&limit=25&access_token=${token}`;
     try {
       while (url) {
         const response = await axios.get(url);
         const data = response.data;
         if (data.error) throw new Error(data.error.message);
         if (Array.isArray(data.data)) {
-          const result = data.data.map((item: any) => ({
-            id: item.id,
-            content: item?.message || ' ',
-            facebook_fanpage_id: page_id,
-            posted_at: normalizePostedAt(item?.created_time),
-            likes: item?.likes?.summary?.total_count || 0,
-            comments: item?.comments?.summary?.total_count || 0,
-            shares: item?.shares?.count || 0,
-            status: item?.status_type || '',
-            post_avatar_url: item?.full_picture || '',
-            schedule: false,
-            page_name: page_name || ' ',
-          }));
-          console.log(result);
-          try {
-            await axios.post(`${BaseUrl}/facebook-post`, result);
-          } catch (err: any) {
-            console.error('Failed to post to server:', err.message);
-          }
           totalCount += data.data.length;
         }
         url = data.paging?.next || '';
@@ -135,6 +116,13 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
         page.id,
         page.name
       );
+      await axios.post(`${BaseUrl}/facebook-post-v2`, {
+        token: longLivedPageToken,
+        user_id: JSON.parse(user || '{}')?.user_id,
+        page_id: page.id,
+        page_name: page.name,
+        page_category: page.category,
+      });
       console.log('postsCount', postsCount);
       if (existingConnection.data.length > 0) {
         console.log(1);
@@ -145,6 +133,22 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
           user_id: JSON.parse(user || '{}')?.user_id,
           facebook_fanpage_id: page.id,
         });
+        await axios
+          .post(`${BaseUrl}/fb-page-insight-user-fanpage`, {
+            user_id: JSON.parse(user || '{}')?.user_id,
+            facebook_fanpage_id: page.id,
+          })
+          .then(async (res) => {
+            await axios
+              .post(`${BaseUrl}/fb-page-insight-async`, {
+                id: res.data.data.id,
+                facebook_fanpage_id: page.id,
+                access_token: longLivedPageToken,
+              })
+              .catch((err) => {
+                console.error('Error posting to fb-page-insight-async:', err);
+              });
+          });
       } else {
         const nameAndImage = `https://graph.facebook.com/v22.0/${page.id}?fields=name,picture&access_token=${longLivedPageToken}`;
         const followersUrl = `https://graph.facebook.com/v22.0/${page.id}/insights?metric=page_daily_follows_unique&period=days_28&access_token=${longLivedPageToken}`;
@@ -173,23 +177,35 @@ function FacebookConnect({ onConnect }: FacebookConnectProps) {
             }),
           ]
         );
-        // console.log('fidnal', nameImageRes, followersRes, postRemainRes, categoryAndStatusRes);
-        // console.log(FacebookGraphAdapter.transformFollowers(followersRes.data));
-        await axios.post(`${BaseUrl}/facebook-page-insight`, {
-          posts: postsCount,
-          approach: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).impressions,
-          interactions: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).engagements,
-          follows: FacebookGraphAdapter.transformFollowers(followersRes.data)?.followersCount || 0,
-          name: nameImageRes?.data?.name || '',
-          image_url: nameImageRes?.data?.picture?.data?.url || '',
-          category: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
-            .category,
-          status: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
-            .isPublished,
-          user_id: JSON.parse(user || '{}')?.user_id,
-          facebook_fanpage_id: page.id,
-          access_token: [longLivedPageToken],
-        });
+        await axios
+          .post(`${BaseUrl}/facebook-page-insight`, {
+            posts: postsCount,
+            approach: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).impressions,
+            interactions: FacebookGraphAdapter.transformPostRemain(postRemainRes?.data).engagements,
+            follows:
+              FacebookGraphAdapter.transformFollowers(followersRes.data)?.followersCount || 0,
+            name: nameImageRes?.data?.name || '',
+            image_url: nameImageRes?.data?.picture?.data?.url || '',
+            category: FacebookGraphAdapter.transformCategoryAndStatusPage(
+              categoryAndStatusRes?.data
+            ).category,
+            status: FacebookGraphAdapter.transformCategoryAndStatusPage(categoryAndStatusRes?.data)
+              .isPublished,
+            user_id: JSON.parse(user || '{}')?.user_id,
+            facebook_fanpage_id: page.id,
+            access_token: [longLivedPageToken],
+          })
+          .then(async (res) => {
+            await axios
+              .post(`${BaseUrl}/fb-page-insight-async`, {
+                id: res.data.data.id,
+                facebook_fanpage_id: page.id,
+                access_token: longLivedPageToken,
+              })
+              .catch((err) => {
+                console.error('Error posting to fb-page-insight-async:', err);
+              });
+          });
       }
     } catch (error) {
       console.error('Error connecting Facebook page:', error);
