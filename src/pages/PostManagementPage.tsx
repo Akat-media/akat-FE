@@ -53,6 +53,8 @@ function PostManagementPage() {
   );
   const [setting, setSetting] = useState<any>(null);
   const [refresh, setRefresh] = useState<any>(null);
+  const [loadingComments, setLoadingComments] = useState(false);
+
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -119,7 +121,9 @@ function PostManagementPage() {
   const fetchCommentsByPostId = async (postId: string, accessToken: string) => {
     try {
       setGlobalLoading(true);
+      setLoadingComments(true);
       setError(null);
+      setComments([]);
       const response = await axios.get(
         `https://graph.facebook.com/v22.0/${postId}/comments?access_token=${accessToken}`
       );
@@ -127,10 +131,12 @@ function PostManagementPage() {
       setSelectedPostComments(postId);
     } catch (error) {
       console.error('Lỗi khi tải bình luận:', error);
+      setComments([]);
       toast.error('Không thể tải bình luận 😭');
       setTimeout(() => navigate('/moderation/posts'), 3000);
     } finally {
       setGlobalLoading(false);
+      setLoadingComments(false);
     }
   };
 
@@ -378,18 +384,19 @@ function PostManagementPage() {
                         <div
                           className="relative h-48 overflow-hidden cursor-pointer"
                           onClick={() => {
-                            try {
+                            const accessToken = fanpages.find(
+                              (f) => f.facebook_fanpage_id === post.facebook_fanpage_id
+                            )?.access_token;
+
+                            if (accessToken) {
                               const images = parseAvatarUrls(post.post_avatar_url);
                               setSelectedPost({
                                 content: post.content,
                                 images: Array.isArray(images) ? images : [post.post_avatar_url],
                               });
-                            } catch (e) {
-                              console.error('Error parsing post_avatar_url:', e);
-                              setSelectedPost({
-                                content: post.content,
-                                images: parseAvatarUrls(post.post_avatar_url),
-                              });
+                              fetchCommentsByPostId(post.id, accessToken);
+                            } else {
+                              console.error('Không tìm thấy access_token cho fanpage này.');
                             }
                           }}
                         >
@@ -421,18 +428,19 @@ function PostManagementPage() {
                       <div
                         className="p-4 flex-1 flex items-center justify-center cursor-pointer"
                         onClick={() => {
-                          try {
-                            const images = JSON.parse(post.post_avatar_url);
+                          const accessToken = fanpages.find(
+                            (f) => f.facebook_fanpage_id === post.facebook_fanpage_id
+                          )?.access_token;
+
+                          if (accessToken) {
+                            const images = parseAvatarUrls(post.post_avatar_url);
                             setSelectedPost({
                               content: post.content,
                               images: Array.isArray(images) ? images : [post.post_avatar_url],
                             });
-                          } catch (e) {
-                            console.error('Error parsing post_avatar_url:', e);
-                            setSelectedPost({
-                              content: post.content,
-                              images: post.post_avatar_url ? [post.post_avatar_url] : [],
-                            });
+                            fetchCommentsByPostId(post.id, accessToken); // gọi API lấy bình luận!
+                          } else {
+                            console.error('Không tìm thấy access_token cho fanpage này.');
                           }
                         }}
                       >
@@ -447,19 +455,7 @@ function PostManagementPage() {
 
                       {/* Footer */}
                       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                        <div
-                          className="flex items-center gap-4"
-                          onClick={() => {
-                            const accessToken = fanpages.find(
-                              (fanpage) => fanpage.facebook_fanpage_id === post.facebook_fanpage_id
-                            )?.access_token;
-                            if (accessToken) {
-                              fetchCommentsByPostId(post.id, accessToken);
-                            } else {
-                              console.error('Không tìm thấy access_token cho fanpage này.');
-                            }
-                          }}
-                        >
+                        <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1 text-gray-500">
                             <FaThumbsUp className="w-4 h-4" />
                             <span className="text-xs font-medium">{post.likes || 0}</span>
@@ -593,103 +589,98 @@ function PostManagementPage() {
         )}
       </div>
 
-      {/* Modal xem chi tiết bài đăng */}
       {selectedPost && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedPost(null);
+              setSelectedPostComments(null);
+              setComments([]);
             }
           }}
         >
           <div className="bg-white rounded-lg p-4 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            {/* Chi tiết bài viết */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Chi tiết bài đăng:</h2>
               <button
                 className="text-gray-500 hover:text-gray-700"
-                onClick={() => setSelectedPost(null)}
+                onClick={() => {
+                  setSelectedPost(null);
+                  setSelectedPostComments(null);
+                  setComments([]);
+                }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex items-center justify-center mb-4">
+
+            <div className="mb-4">
               <p className="text-gray-800 text-sm text-center">
                 {selectedPost.content || '[Không có nội dung]'}
               </p>
             </div>
-            {selectedPost.images &&
-              selectedPost.images.length > 0 &&
+
+            {selectedPost.images?.length > 0 &&
               (selectedPost.images.length === 1 ? (
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center mb-6">
                   <img
                     src={selectedPost.images[0]}
-                    alt="Post image"
+                    alt="Post"
                     className="w-auto h-auto max-w-full max-h-[60vh] rounded-lg object-contain"
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   {selectedPost.images.map((image, index) => (
                     <img
                       key={index}
                       src={image}
-                      alt={`Post image ${index + 1}`}
+                      alt={`Post ${index}`}
                       className="w-full h-auto rounded-lg object-cover"
                     />
                   ))}
                 </div>
               ))}
-          </div>
-        </div>
-      )}
 
-      {globalLoading && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
-          <Loader2 className="w-12 h-12 animate-spin text-white" />
-        </div>
-      )}
-
-      {selectedPostComments && !loading && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedPostComments(null);
-            }
-          }}
-        >
-          <div className="bg-white rounded-lg p-4 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Bình luận:</h2>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => setSelectedPostComments(null)}
-              >
-                <X className="w-5 h-5" />
-              </button>
+            {/* Phần bình luận */}
+            <div className="mt-4">
+              <h2 className="text-lg font-semibold mb-2">Bình luận:</h2>
+              {error ? (
+                <div className="text-center text-red-500">{error}</div>
+              ) : loadingComments ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  <span className="ml-2 text-gray-500 text-sm">Đang tải bình luận...</span>
+                </div>
+              ) : comments.length > 0 ? (
+                <ul className="space-y-4">
+                  {comments.map((comment, index) => (
+                    <li key={index} className="flex gap-4">
+                      <img
+                        src={comment.user_avatar || defaultImage}
+                        alt={comment.user_name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div className="flex-1">
+                        <div className="bg-gray-100 p-3 rounded-lg">
+                          <p className="font-semibold">{comment.user_name}</p>
+                          <p className="text-sm text-gray-700">{comment.message}</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                          <button className="hover:underline">Like</button>
+                          <button className="hover:underline">Reply</button>
+                          <span>{comment.timestamp}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-gray-500">Không có bình luận nào</div>
+              )}
             </div>
-            {error ? (
-              <div className="text-center text-red-500">{error}</div>
-            ) : comments.length > 0 ? (
-              <ul className="space-y-4">
-                {comments.map((comment, index) => (
-                  <li
-                    key={comment.id}
-                    className={`pb-2 border-b px-3 py-2 rounded ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-20'
-                    }`}
-                  >
-                    <div className="text-base font-semibold text-gray-800">
-                      {comment.from?.name || 'Người dùng ẩn danh'}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">{comment.message}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center text-gray-500">Không có bình luận nào</div>
-            )}
           </div>
         </div>
       )}

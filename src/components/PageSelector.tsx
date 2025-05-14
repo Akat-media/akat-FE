@@ -37,7 +37,7 @@ function PageSelector({ onPageSelect, onClose, data }: PageSelectorProps) {
           </div>
 
           {/* Pages List */}
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
             {data.map((page: any) => (
               <button
                 key={page.id}
