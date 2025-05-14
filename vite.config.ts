@@ -7,16 +7,16 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  // server: {
-  //   historyApiFallback: true,
-  //   https: {
-  //     key: './localhost+1-key.pem',
-  //     cert: './localhost+1.pem',
-  //   },
-  //   host: 'localhost',
-  //   port: 5173,
-  // },
   server: {
-    allowedHosts: ['arkansas-arctic-configured-kyle.trycloudflare.com'],
+  //   historyApiFallback: true,
+    https: {
+      key: './localhost+1-key.pem',
+      cert: './localhost+1.pem',
+    },
+    host: 'localhost',
+    port: 5173,
   },
+  // server: {
+  //   allowedHosts: ['arkansas-arctic-configured-kyle.trycloudflare.com'],
+  // },
 });
