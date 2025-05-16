@@ -23,6 +23,7 @@ import { debounce } from 'lodash';
 import defaultImage from '../../public/default-avatar.jpg';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import LoadingContent from '../components/content-management/post-managenment/LoadingContent.tsx';
 
 const PostSchedule = lazy(() => import('../components/PostSchedule'));
 const NewPostModal = lazy(() => import('../components/NewPostModal'));
@@ -488,7 +489,13 @@ function PostManagementPage() {
               )}
             </>
           ) : activeTab === 'schedule' ? (
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense
+              fallback={
+                <div>
+                  <LoadingContent />
+                </div>
+              }
+            >
               <PostSchedule />
             </Suspense>
           ) : (
@@ -553,7 +560,13 @@ function PostManagementPage() {
 
         {/* Modal them bai viet moi*/}
         {showPageSelector && (
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense
+            fallback={
+              <div>
+                <LoadingContent />
+              </div>
+            }
+          >
             <PageSelector
               onPageSelect={(page) => {
                 setSelectedPage(page);
@@ -566,7 +579,13 @@ function PostManagementPage() {
           </Suspense>
         )}
         {showPostModal && (
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense
+            fallback={
+              <div>
+                <LoadingContent />
+              </div>
+            }
+          >
             <NewPostModal
               page={selectedPage}
               onClose={() => {
