@@ -335,7 +335,7 @@ function PostManagementPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
                   {posts.map((post) => (
                     <div
-                      key={post.id}
+                      key={post._id}
                       className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
                     >
                       {/* Header */}
@@ -496,7 +496,9 @@ function PostManagementPage() {
                 </div>
               }
             >
-              <PostSchedule />
+              <PostSchedule
+                page={selectedPage}
+              />
             </Suspense>
           ) : (
             <>
