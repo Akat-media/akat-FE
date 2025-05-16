@@ -1,0 +1,8 @@
+import { io } from 'socket.io-client';
+
+const socket = io('http://127.0.0.1:4000', {
+  transports: ['websocket'],
+  withCredentials: true, // nếu backend yêu cầu cookie/session
+});
+
+export default socket;

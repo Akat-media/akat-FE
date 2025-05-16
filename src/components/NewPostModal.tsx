@@ -34,24 +34,26 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [ask, setAsk] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [visible, setVisible] = useState(false);
+  console.log('page', page);
 
   const generateSuggestions = async () => {
     try {
       setSuggestionHistory([]);
       setGeneratingSuggestions(true);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const newSuggestions = [
-        '🌟 Mẫu váy mới về, chất liệu cotton 100% mềm mại, thoáng mát. Thiết kế trẻ trung, năng động phù hợp cho mọi dịp. Giá chỉ 299k - Inbox ngay để được tư vấn chi tiết! #ThoStore #VayDep',
-        '✨ SALE SHOCK cuối tuần - Giảm giá đến 50% toàn bộ váy đầm. Cơ hội vàng để sở hữu những items thời trang cao cấp với giá cực tốt. Số lượng có hạn - Nhanh tay đặt hàng! 🛍️',
-        '🎉 BST Xuân Hè 2024 đã chính thức ra mắt! Đa dạng mẫu mã, kiểu dáng trendy, chất liệu cao cấp. Ưu đãi đặc biệt cho 100 khách hàng đầu tiên. Ghé shop ngay hôm nay! 👗',
-      ];
-      setSuggestions(newSuggestions);
-      setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
-      setShowAiSuggestions(true);
+      const postResponse = await axios.post(`${BaseUrl}/genpost-openai`, {
+        question: content,
+        facebook_fanpage_id: page.facebook_fanpage_id || '',
+      });
+      console.log(postResponse.data);
+      if (postResponse.data) {
+        setGeneratingSuggestions(false);
+      } else {
+        setGeneratingSuggestions(false);
+      }
+      setSuggestions([]);
+      setSuggestionHistory((prev) => [...prev]);
     } catch (error) {
       console.error('Error generating suggestions:', error);
-    } finally {
-      setGeneratingSuggestions(false);
     }
   };
 
@@ -189,8 +191,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const handleClose = () => {
     setShowAiSuggestions(false);
     setSuggestionHistory([]);
-
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -292,10 +293,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <Bot className="w-5 h-5 text-purple-600" />
                     <h4 className="font-medium">Gợi ý từ AI</h4>
                   </div>
-                  <button
-                    onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
+                  <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
