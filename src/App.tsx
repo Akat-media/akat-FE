@@ -381,11 +381,16 @@ function App() {
                           <Menu className="w-6 h-6 text-gray-600" />
                         </button>
                         <div className="flex items-center gap-3">
-                          <Bot className="w-6 h-6 text-blue-600" />
+                          <img
+                            src="/aka platform.png"
+                            alt="AKA Platform Logo"
+                            className="w-8 h-8 object-contain"
+                          />
                           <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                             AKA Platform
                           </div>
                         </div>
+                        <div className="w-8 h-8" />
                       </div>
                       <main className="flex-1 overflow-x-hidden overflow-y-auto">
                         <Routes>
