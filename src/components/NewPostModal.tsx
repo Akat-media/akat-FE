@@ -34,26 +34,27 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [ask, setAsk] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [visible, setVisible] = useState(false);
-  console.log('page', page);
+  // console.log('page', page);
+  const [loading, setLoading] = useState(false);
 
   const generateSuggestions = async () => {
     try {
+      setLoading(false);
       setSuggestionHistory([]);
       setGeneratingSuggestions(true);
       const postResponse = await axios.post(`${BaseUrl}/genpost-openai`, {
         question: content,
         facebook_fanpage_id: page.facebook_fanpage_id || '',
       });
-      console.log(postResponse.data);
-      if (postResponse.data) {
-        setGeneratingSuggestions(false);
-      } else {
-        setGeneratingSuggestions(false);
-      }
-      setSuggestions([]);
-      setSuggestionHistory((prev) => [...prev]);
+
+      const newSuggestions = postResponse.data.data.posts;
+      setSuggestions(newSuggestions);
+      setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
+      setShowAiSuggestions(true);
     } catch (error) {
       console.error('Error generating suggestions:', error);
+    } finally {
+      setGeneratingSuggestions(false);
     }
   };
 
@@ -168,19 +169,26 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setAsk(e.target.value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (ask.trim()) {
-      const newSuggestions = [
-        ask,
-        `${ask} - Thêm ưu đãi đặc biệt: Mua 2 tặng 1!`,
-        `${ask} - Nhanh tay đặt hàng để nhận quà tặng hấp dẫn! #KhuyếnMãi`,
-      ];
+      try {
+        setLoading(true);
+        const postResponse = await axios.post(`${BaseUrl}/genpost-openai`, {
+          question: ask,
+          facebook_fanpage_id: page.facebook_fanpage_id || '',
+        });
+        const newSuggestions = postResponse.data.data.posts;
 
-      setSuggestions(newSuggestions);
-      setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
-      setAsk('');
-      setShowHistory(false);
-      setHasSubmitted(true);
+        setSuggestions(newSuggestions);
+        setSuggestionHistory((prev) => [...newSuggestions, ...prev]);
+        setAsk('');
+        setShowHistory(false);
+        setHasSubmitted(true);
+      } catch (error) {
+        console.error('Error submitting question:', error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -191,6 +199,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const handleClose = () => {
     setShowAiSuggestions(false);
     setSuggestionHistory([]);
+    setSuggestions([]);
+    setAsk('');
+    setLoading(false);
+    setHasSubmitted(false);
+    setVisible(false);
   };
 
   return (
@@ -331,11 +344,40 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                       </p>
                       <button
                         onClick={handleSubmit}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        disabled={!ask.trim()}
+                        disabled={loading || !ask.trim()}
+                        className={`px-4 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center transition-colors ${
+                          loading || !ask.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                        }`}
                       >
-                        Gửi
+                        {loading ? (
+                          <>
+                            <svg
+                              className="animate-spin h-5 w-5 mr-2 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                            AI đang tìm kiếm
+                          </>
+                        ) : (
+                          'Gửi'
+                        )}
                       </button>
+
                     </div>
                   </div>
                 </div>
