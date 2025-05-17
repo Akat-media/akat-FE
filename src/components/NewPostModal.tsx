@@ -206,6 +206,36 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setVisible(false);
   };
 
+  const sampleLocations = [
+    { id: 1, name: "Hà Nội, Việt Nam", type: "Thành phố" },
+    { id: 2, name: "TP. Hồ Chí Minh, Việt Nam", type: "Thành phố" },
+    { id: 3, name: "Đà Nẵng, Việt Nam", type: "Thành phố" },
+    { id: 4, name: "Hải Phòng, Việt Nam", type: "Thành phố" },
+    { id: 5, name: "Cần Thơ, Việt Nam", type: "Thành phố" },
+  ];
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [locations, setLocations] = useState(sampleLocations);
+
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => {
+    setIsOpen(false);
+    setSearchTerm("");
+    setLocations(sampleLocations);
+  };
+
+  const handleSearch = (e: any) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    const filtered = sampleLocations.filter((location) =>
+      location.name.toLowerCase().includes(term.toLowerCase())
+    );
+    setLocations(filtered);
+  };
+
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
@@ -411,10 +441,134 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   <Camera className="w-5 h-5" />
                   <span className="text-sm">Story</span>
                 </button>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors">
+                <button
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors"
+                  onClick={openModal}
+                >
                   <MapPin className="w-5 h-5" />
                   <span className="text-sm">Check in</span>
                 </button>
+
+                {/* Modal */}
+                {isOpen && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg w-full max-w-md mx-4 p-4">
+                      {/* Header */}
+                      <div className="flex justify-between items-center mb-4">
+                        <button
+                          onClick={closeModal}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15 19l-7-7 7-7"
+                            />
+                          </svg>
+                        </button>
+                        <h2 className="text-lg font-semibold text-center flex-1">Tìm kiếm vị trí</h2>
+                        <button
+                          onClick={closeModal}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Ô tìm kiếm */}
+                      <div className="relative mb-4">
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={handleSearch}
+                          placeholder="Nhập tên vị trí..."
+                          className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <svg
+                          className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+                      </div>
+
+                      <p className="font-medium">Gợi ý</p>
+
+                      {/* Danh sách vị trí */}
+                      <div className="max-h-64 overflow-y-auto">
+                        {locations.length > 0 ? (
+                          locations.map((location) => (
+                            <div
+                              key={location.id}
+                              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer rounded-lg"
+                              onClick={() => {
+                                alert(`Đã chọn: ${location.name}`);
+                                closeModal();
+                              }}
+                            >
+                              <svg
+                                className="w-5 h-5 text-gray-500 mr-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                              </svg>
+                              <div>
+                                <p className="font-medium">{location.name}</p>
+                                <p className="text-sm text-gray-500">{location.type}</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-center">Không tìm thấy vị trí</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
                   <Tag className="w-5 h-5" />
                   <span className="text-sm">Gắn thẻ</span>
