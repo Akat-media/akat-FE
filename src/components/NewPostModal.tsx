@@ -17,11 +17,24 @@ import { BaseUrl } from '../constants';
 import { toast } from 'react-toastify';
 import LoadingContent from './content-management/post-managenment/LoadingContent.tsx';
 
+import {
+  MapContainer,
+  TileLayer,
+  // useMapEvents,
+  // MapConsumer
+} from "react-leaflet";
+
 interface NewPostModalProps {
   page: any;
   onClose: () => void;
   onSuccess: () => void;
 }
+
+// interface Location {
+//   lat: number;
+//   lng: number;
+//   display_name: string;
+// }
 
 function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isScheduled, setIsScheduled] = useState(false);
@@ -217,6 +230,20 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [locations, setLocations] = useState(sampleLocations);
+  const [current, setCurrent] = useState();
+
+  const currentLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        // setCurrent({ lat, lon });
+      },
+      (error) => {
+        console.warn("Không thể lấy vị trí:", error.message);
+      }
+    );
+  }
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
@@ -235,6 +262,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setLocations(filtered);
   };
 
+  const [selected, setSelected] = useState(false);
+  const [showMap, setShowMap] = useState(true);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -284,6 +313,32 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 placeholder="Bạn đang nghĩ gì?"
                 className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-gray-900 placeholder-gray-500 text-lg"
               />
+
+              {/*map*/}
+              {selected && showMap && (
+                <div className="relative w-full h-60 rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0">
+                  <button
+                    onClick={() => setShowMap(false)}
+                    className="absolute top-2 right-2 z-[999] bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                  >
+                    <X size={20} className="text-gray-700" />
+                  </button>
+
+                  <MapContainer
+                    center={[21.0285, 105.8542]} // Hà Nội
+                    zoom={13}
+                    className="h-full w-full"
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                  </MapContainer>
+                </div>
+              )}
+
+
             </div>
             {images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
@@ -525,6 +580,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
 
                       {/* Danh sách vị trí */}
                       <div className="max-h-64 overflow-y-auto">
+                        <div>Vị trí hiện tại</div>
+                        <p>{current}</p>
                         {locations.length > 0 ? (
                           locations.map((location) => (
                             <div
@@ -533,6 +590,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                               onClick={() => {
                                 alert(`Đã chọn: ${location.name}`);
                                 closeModal();
+                                setSelected(true);
+                                setShowMap(true);
                               }}
                             >
                               <svg
