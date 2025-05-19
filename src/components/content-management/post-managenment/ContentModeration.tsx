@@ -34,6 +34,8 @@ interface MonitoredPage {
 
 type Props = {
   onClose: () => void;
+  setRefresh: React.Dispatch<any>;
+  data: any;
 };
 
 const ContentModeration: React.FC<Props> = ({ onClose }) => {

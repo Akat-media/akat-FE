@@ -8,7 +8,7 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-  //   historyApiFallback: true,
+    //   historyApiFallback: true,
     https: {
       key: './localhost+1-key.pem',
       cert: './localhost+1.pem',
