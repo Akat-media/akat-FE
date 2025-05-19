@@ -20,7 +20,10 @@ import {
   Users,
   Search,
   XCircle,
-  PanelRightClose, Loader2, Sparkles, Bot,
+  PanelRightClose,
+  Loader2,
+  Sparkles,
+  Bot,
 } from 'lucide-react';
 import PageSelector from './PageSelector';
 import { format, isToday, parseISO } from 'date-fns';
@@ -55,7 +58,7 @@ interface PostScheduleProps {
   // onSuccess: () => void;
 }
 
-function PostSchedule({page}:PostScheduleProps) {
+function PostSchedule({ page }: PostScheduleProps) {
   const [showNewPost, setShowNewPost] = useState(false);
   const [showPostRelease, setShowPostRelease] = useState(true);
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -725,12 +728,12 @@ function PostSchedule({page}:PostScheduleProps) {
 
                 {/* Content Input */}
                 <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Bạn đang nghĩ gì?"
-              className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
-            />
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Bạn đang nghĩ gì?"
+                    className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
+                  />
                   {images.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-3">
                       {images.map((img: any, index: any) => (
@@ -803,19 +806,21 @@ function PostSchedule({page}:PostScheduleProps) {
                     )}
                     <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6">
                       <div className="flex flex-col gap-4">
-                  <textarea
-                    value={ask}
-                    onChange={handleChange}
-                    placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
-                    className="w-full h-48 p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-200 resize-y"
-                  />
+                        <textarea
+                          value={ask}
+                          onChange={handleChange}
+                          placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
+                          className="w-full h-48 p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all duration-200 resize-y"
+                        />
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-gray-500"></p>
                           <button
                             onClick={handleSubmit}
                             disabled={loading || !ask.trim()}
                             className={`px-4 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center transition-colors ${
-                              loading || !ask.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                              loading || !ask.trim()
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-blue-700'
                             }`}
                           >
                             {loading ? (

@@ -395,7 +395,8 @@ function PostManagementPage() {
                                 content: post.content,
                                 images: Array.isArray(images) ? images : [post.post_avatar_url],
                               });
-                              fetchCommentsByPostId(post.id, accessToken);
+
+                              fetchCommentsByPostId(post.facebook_post_id, accessToken);
                             } else {
                               console.error('Không tìm thấy access_token cho fanpage này.');
                             }
@@ -439,7 +440,7 @@ function PostManagementPage() {
                               content: post.content,
                               images: Array.isArray(images) ? images : [post.post_avatar_url],
                             });
-                            fetchCommentsByPostId(post.id, accessToken); // gọi API lấy bình luận!
+                            fetchCommentsByPostId(post.facebook_post_id, accessToken); // gọi API lấy bình luận!
                           } else {
                             console.error('Không tìm thấy access_token cho fanpage này.');
                           }
@@ -496,9 +497,7 @@ function PostManagementPage() {
                 </div>
               }
             >
-              <PostSchedule
-                page={selectedPage}
-              />
+              <PostSchedule page={selectedPage} />
             </Suspense>
           ) : (
             <>
