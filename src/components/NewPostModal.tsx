@@ -11,6 +11,7 @@ import {
   Tag,
   Users,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
@@ -67,7 +68,51 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [files, setFiles] = useState<any>([]);
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // phần video
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [videos, setVideos] = useState<string[]>([]);
+  const [fileVideos, setFileVideos] = useState<any[]>([]);
+  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
 
+    const MAX_SIZE_MB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    const validFiles: File[] = [];
+    const rejectedFiles: string[] = [];
+
+    Array.from(files).forEach((file) => {
+      if (file.size <= MAX_SIZE_BYTES) {
+        validFiles.push(file);
+      } else {
+        rejectedFiles.push(file.name);
+      }
+    });
+
+    if (rejectedFiles.length > 0) {
+      toast.error(
+        `Các video sau vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối:\n${rejectedFiles.join('\n')}`,
+        {
+          position: 'top-right',
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+        }
+      );
+    }
+
+    const newVideos = validFiles.map((file) => URL.createObjectURL(file));
+    setVideos((prev) => [...prev, ...newVideos]);
+    setFileVideos((prev) => [...prev, ...validFiles]);
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setVideos((prev) => prev.filter((_, i) => i !== index));
+  };
   const handleImageChange = (e: any) => {
     const files = Array.from(e.target.files);
     const newImages = files.map((file: any) => URL.createObjectURL(file));
@@ -98,7 +143,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       console.log('now', now.toISOString());
       console.log('Số lượng files gửi đi:', files.length);
       const body: any = createFormData({
-        files,
+        files: [...files, ...fileVideos],
         content: content,
         likes: '0',
         comments: '0',
@@ -117,6 +162,12 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         .post(`${BaseUrl}/facebook-schedule`, body, {
           headers: {
             'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            const percent = progressEvent.total
+              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              : 0;
+            setUploadProgress(percent);
           },
         })
         .then((res) => {
@@ -245,7 +296,12 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 </div>
               </div>
             </div>
-
+            <button
+              className={`flex gap-2 px-4 py-2 rounded-full 
+                ${uploadProgress === 100 ? 'bg-green-800 text-[white]' : 'bg-slate-200'}`}
+            >
+              <Upload /> {` ${uploadProgress}%`}
+            </button>
             {/* Content Input */}
             <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
               <textarea
@@ -272,6 +328,21 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     />
                     <button
                       onClick={() => handleRemoveImage(index)}
+                      className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {videos.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {videos.map((vid: string, index: number) => (
+                  <div key={index} className="relative w-32 h-32">
+                    <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      onClick={() => handleRemoveVideo(index)}
                       className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
                     >
                       ✕
@@ -346,7 +417,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                         onClick={handleSubmit}
                         disabled={loading || !ask.trim()}
                         className={`px-4 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center transition-colors ${
-                          loading || !ask.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                          loading || !ask.trim()
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-blue-700'
                         }`}
                       >
                         {loading ? (
@@ -377,7 +450,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                           'Gửi'
                         )}
                       </button>
-
                     </div>
                   </div>
                 </div>
@@ -396,6 +468,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   id="imageUpload"
                   onChange={handleImageChange}
                 />
+                <input
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  className="hidden"
+                  id="videoUpload"
+                  onChange={handleVideoChange}
+                />
                 <label
                   htmlFor="imageUpload"
                   className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors cursor-pointer"
@@ -403,10 +483,13 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   <Image className="w-5 h-5" />
                   <span className="text-sm">Ảnh</span>
                 </label>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
+                <label
+                  htmlFor="videoUpload"
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors cursor-pointer"
+                >
                   <Video className="w-5 h-5" />
                   <span className="text-sm">Video</span>
-                </button>
+                </label>
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">
                   <Camera className="w-5 h-5" />
                   <span className="text-sm">Story</span>
@@ -415,14 +498,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   <MapPin className="w-5 h-5" />
                   <span className="text-sm">Check in</span>
                 </button>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
+                {/* <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
                   <Tag className="w-5 h-5" />
                   <span className="text-sm">Gắn thẻ</span>
                 </button>
                 <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">
                   <Users className="w-5 h-5" />
                   <span className="text-sm">Cảm xúc</span>
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
