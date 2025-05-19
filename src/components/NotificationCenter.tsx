@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
+import socket from '../lib/socket';
+import axios from 'axios';
+import { BaseUrl } from '../constants';
 
 interface Notification {
-  id: number;
+  id: string;
   title: string;
-  description: string;
-  timestamp: string;
+  message: string;
+  createdAt: string;
   isRead: boolean;
 }
 
@@ -19,29 +22,51 @@ const NotificationCenter = () => {
       setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
     }
   };
+  const hanleCallNoti = async () => {
+    try {
+      const postResponse = await axios.get(`${BaseUrl}/noti?userId=${userId}`);
+      const data = postResponse.data.data.data.map((item: any) => ({
+        id: item._id,
+        title: item.title,
+        message: item.message,
+        createdAt: new Date(item.createdAt).toLocaleString(),
+        isRead: item.isRead,
+      }));
 
-  const addNotification = (title: string, description: string) => {
-    const newNotification: Notification = {
-      id: Date.now(),
-      title,
-      description,
-      timestamp: new Date().toLocaleString(),
-      isRead: false,
-    };
-    setNotifications((prev) => [newNotification, ...prev]);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
   };
-
   useEffect(() => {
-    const socket = new WebSocket('https://localhost:5173');
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      addNotification(data.title, data.description);
-    };
-
-    return () => socket.close();
+    hanleCallNoti();
   }, []);
+  const user = localStorage.getItem('user');
+  const userId = JSON.parse(user || '{}')?.user_id;
+  useEffect(() => {
+    if (!userId) return;
+    socket.on('connect', () => {
+      console.log('✅ Connected to socket (on connect event):', socket.id);
+      socket.emit('joinRoom', { userId });
+    });
 
+    socket.on('fb-sync', (data) => {
+      console.log('📥 FB Sync Event:', data);
+      const newNoti = {
+        id: data._id,
+        title: data.title,
+        message: data.message,
+        createdAt: new Date(data.createdAt).toLocaleString(),
+        isRead: false,
+      };
+      setNotifications((prev) => [newNoti, ...prev]);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('fb-sync');
+    };
+  }, [userId]);
   const hasUnreadNotifications = notifications.some((notification) => !notification.isRead);
 
   return (
@@ -64,20 +89,20 @@ const NotificationCenter = () => {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg overflow-hidden z-50">
           <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">Thông báo</h3>
+            <h6 className="text-[14px] font-semibold">Thông báo</h6>
           </div>
           <div className="max-h-64 overflow-y-auto">
             {notifications.length > 0 ? (
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 border-b last:border-b-0 hover:bg-gray-50 ${
+                  className={`p-4 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${
                     notification.isRead ? 'bg-gray-100' : ''
                   }`}
                 >
-                  <h4 className="font-bold">{notification.title}</h4>
-                  <p className="text-sm text-gray-600">{notification.description}</p>
-                  <span className="text-xs text-gray-400">{notification.timestamp}</span>
+                  <p className="font-bold text-[12px]">{notification.title}</p>
+                  <p className="text-sm text-[12px] text-gray-600">{notification.message}</p>
+                  <span className="text-xs text-gray-400">{notification.createdAt}</span>
                 </div>
               ))
             ) : (
