@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   X,
   Image,
@@ -16,13 +16,7 @@ import axios from 'axios';
 import { BaseUrl } from '../constants';
 import { toast } from 'react-toastify';
 import LoadingContent from './content-management/post-managenment/LoadingContent.tsx';
-
-import {
-  MapContainer,
-  TileLayer,
-  // useMapEvents,
-  // MapConsumer
-} from "react-leaflet";
+import { debounce } from 'lodash';
 
 interface NewPostModalProps {
   page: any;
@@ -30,11 +24,11 @@ interface NewPostModalProps {
   onSuccess: () => void;
 }
 
-// interface Location {
-//   lat: number;
-//   lng: number;
-//   display_name: string;
-// }
+interface Position {
+  displayName?: string;
+  latitude: number;
+  longitude: number;
+}
 
 function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isScheduled, setIsScheduled] = useState(false);
@@ -219,51 +213,130 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setVisible(false);
   };
 
-  const sampleLocations = [
-    { id: 1, name: "Hà Nội, Việt Nam", type: "Thành phố" },
-    { id: 2, name: "TP. Hồ Chí Minh, Việt Nam", type: "Thành phố" },
-    { id: 3, name: "Đà Nẵng, Việt Nam", type: "Thành phố" },
-    { id: 4, name: "Hải Phòng, Việt Nam", type: "Thành phố" },
-    { id: 5, name: "Cần Thơ, Việt Nam", type: "Thành phố" },
-  ];
-
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [locations, setLocations] = useState(sampleLocations);
-  const [current, setCurrent] = useState();
-
-  const currentLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        // setCurrent({ lat, lon });
-      },
-      (error) => {
-        console.warn("Không thể lấy vị trí:", error.message);
-      }
-    );
-  }
+  const [locations, setLocations] = useState("");
+  const [lats, setLats] = useState('');
+  const [lons, setLons] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<Position | null>(null);
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
     setSearchTerm("");
-    setLocations(sampleLocations);
+    setLocations("");
   };
 
-  const handleSearch = (e: any) => {
+  const search = useCallback(
+    async(searchQuery: string)=> {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await axios.get(`${BaseUrl}/places`, {
+          params: {
+            q: searchQuery,
+          },
+        });
+        setLats(response.data.data.lat);
+        setLons(response.data.data.lon);
+        setLocations(response.data.data.display_name)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to fetch results');
+      } finally {
+        setLoading(false);
+      }
+    },[]
+  );
+  const debouncedSearch = useCallback(
+    debounce((searchQuery: string) => {
+      search(searchQuery);
+    }, 500),
+    [search]
+  );
+
+  const handleInputChange = async (e: any) => {
     const term = e.target.value;
     setSearchTerm(term);
-
-    const filtered = sampleLocations.filter((location) =>
-      location.name.toLowerCase().includes(term.toLowerCase())
-    );
-    setLocations(filtered);
+    debouncedSearch(term);
   };
+
+  let iframeUrl = '';
+  if(lats && lons) {
+    iframeUrl = `https://www.google.com/maps?q=${lats},${lons}&z=13&output=embed`
+  }
 
   const [selected, setSelected] = useState(false);
   const [showMap, setShowMap] = useState(true);
+
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  const getCurrentLocation = async (): Promise<Position> => {
+    if (!navigator.geolocation) {
+      throw new Error('Trình duyệt không hỗ trợ Geolocation API');
+    }
+
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          const coords: GeolocationCoordinates = position.coords;
+          const { latitude, longitude } = coords;
+          resolve({ latitude, longitude });
+        },
+        (error: GeolocationPositionError) => {
+          reject(new Error(error.message));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    });
+  };
+
+  const handleGetLocation = async () => {
+    try {
+      const position = await getCurrentLocation();
+
+      const response = await axios.get(`${BaseUrl}/places/current`, {
+        params: {
+          lat: position.latitude,
+          lon: position.longitude,
+        },
+      });
+      const displayName = response.data.data?.display_name || 'Không xác định';
+
+      setLocation((prev) => {
+        if (
+          !prev ||
+          prev.latitude !== position.latitude ||
+          prev.longitude !== position.longitude ||
+          prev.displayName !== displayName
+        ) {
+          return { ...position, displayName };
+        }
+        return prev;
+      });
+
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể lấy vị trí');
+    }
+  };
+
+  useEffect(() => {
+    handleGetLocation();
+    if (!navigator.geolocation) {
+      setError('Trình duyệt không hỗ trợ Geolocation API');
+      return;
+    }
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -324,21 +397,23 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <X size={20} className="text-gray-700" />
                   </button>
 
-                  <MapContainer
-                    center={[21.0285, 105.8542]} // Hà Nội
-                    zoom={13}
-                    className="h-full w-full"
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                  </MapContainer>
+
+                  {lats && lons && (
+                    <div>
+                      <iframe
+                        src={iframeUrl}
+                        width="100%"
+                        height="500"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        title="Google Maps"
+                      />
+                    </div>
+                  )}
+
                 </div>
               )}
-
-
             </div>
             {images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
@@ -556,7 +631,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                         <input
                           type="text"
                           value={searchTerm}
-                          onChange={handleSearch}
+                          onChange={handleInputChange}
+                          // onKeyDown={handleKeyDown}
                           placeholder="Nhập tên vị trí..."
                           className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
@@ -576,52 +652,62 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                         </svg>
                       </div>
 
-                      <p className="font-medium">Gợi ý</p>
+                      <p className="font-medium">Vị trí hiện tại</p>
 
                       {/* Danh sách vị trí */}
                       <div className="max-h-64 overflow-y-auto">
-                        <div>Vị trí hiện tại</div>
-                        <p>{current}</p>
-                        {locations.length > 0 ? (
-                          locations.map((location) => (
-                            <div
-                              key={location.id}
-                              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer rounded-lg"
-                              onClick={() => {
-                                alert(`Đã chọn: ${location.name}`);
-                                closeModal();
-                                setSelected(true);
-                                setShowMap(true);
-                              }}
+                        <div>
+                          {location ? (
+                            <div onClick={()=> {
+                              search(`${location?.displayName}`)
+                              closeModal();
+                              setSelected(true);
+                              setShowMap(true);
+                            }}>{location.displayName}</div>
+                          ) : (
+                            <p>Đang tải vị trí...</p>
+                          )}
+                          {error && <p>Lỗi: {error}</p>}
+                        </div>
+
+                        {locations ? (
+                          <div
+                            // key={location.id}
+                            className="flex items-center p-2 hover:bg-gray-100 cursor-pointer rounded-lg"
+                            onClick={() => {
+                              closeModal();
+                              setSelected(true);
+                              setShowMap(true);
+                            }}
+                          >
+                            <svg
+                              className="w-5 h-5 text-gray-500 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
                             >
-                              <svg
-                                className="w-5 h-5 text-gray-500 mr-3"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                              <div>
-                                <p className="font-medium">{location.name}</p>
-                                <p className="text-sm text-gray-500">{location.type}</p>
-                              </div>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            <div>
+                              <p className="font-medium">{locations}</p>
                             </div>
-                          ))
+                          </div>
+
                         ) : (
-                          <p className="text-gray-500 text-center">Không tìm thấy vị trí</p>
+                          // <p className="text-gray-500 text-center">Không tìm thấy vị trí</p>
+                          <p></p>
                         )}
                       </div>
                     </div>
