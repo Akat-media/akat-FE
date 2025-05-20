@@ -23,9 +23,12 @@ import {
   updatePageConfig,
   type FacebookPost,
 } from '../../../lib/contentModeration';
+import axios from 'axios';
+import { BaseUrl } from '../../../constants';
 
 interface MonitoredPage {
   id: string;
+  facebook_fanpage_id: string;
   name: string;
   avatarUrl?: string;
   followerCount?: number;
@@ -39,6 +42,7 @@ type Props = {
 };
 
 const ContentModeration: React.FC<Props> = ({ onClose }) => {
+  const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { setPageMonitoring, initializeMonitoring } = useMonitoringStore();
@@ -98,12 +102,12 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [prompt, setPrompt] = useState(defaultPrompt);
 
   useEffect(() => {
-    fetchData();
+    fetchPages();
   }, []);
 
   useEffect(() => {
     fetchPosts();
-  }, [currentStatus, page]);
+  }, [currentStatus, page, selectedPage]);
 
   useEffect(() => {
     if (selectedPage) savePageConfig();
@@ -113,24 +117,41 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     if (selectedPage) loadPageConfig(selectedPage);
   }, [selectedPage]);
 
-  const fetchData = async () => {
+  const fetchPages = async () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPages = await getUserFacebookPages();
-      const monitoredPages = fetchedPages.map((page) => ({
-        id: page.pageId,
-        name: page.pageName,
-        avatarUrl: page.avatarUrl,
-        followerCount: page.followerCount,
-        isMonitored: useMonitoringStore.getState().getPageMonitoring(page.pageId) ?? false,
-      }));
+
+      const userId = JSON.parse(user || '{}')?.user_id;
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
+      const response = await axios.get(`${BaseUrl}/facebook-page-insight`, {
+        params: {
+          user_id: userId,
+          page: 1,
+          pageSize: 100,
+        },
+      });
+
+      const connections = response.data.data.data;
+
+      const monitoredPages: MonitoredPage[] =
+        connections?.map((conn: any) => ({
+          id: conn.id,
+          facebook_fanpage_id: conn.facebook_fanpage_id,
+          name: conn.name || 'Unnamed Page',
+          avatarUrl: conn.image_url,
+          followerCount: conn.follows || 0,
+          isMonitored: useMonitoringStore.getState().getPageMonitoring(conn.id) ?? false,
+        })) || [];
+
       setPages(monitoredPages);
-      initializeMonitoring(fetchedPages.map((page) => page.pageId));
-      await fetchPosts();
+      initializeMonitoring(monitoredPages.map((page) => page.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
-      console.error('Error fetching data:', err);
+      console.error('Error fetching pages:', err);
     } finally {
       setLoading(false);
     }
@@ -139,12 +160,46 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const fetchPosts = async () => {
     try {
       setLoadingPosts(true);
-      const status = currentStatus === 'all' ? undefined : currentStatus;
-      const response = await getModeratedPosts(status, page, 10);
-      setPosts(response.data);
-      setTotalPages(response.pagination.pages);
+      if (!selectedPage) {
+        setPosts([]);
+        setTotalPages(1);
+        setLoadingPosts(false);
+        return;
+      }
+      const pageObj = pages.find((p) => p.id === selectedPage);
+      if (!pageObj) {
+        setPosts([]);
+        setTotalPages(1);
+        setLoadingPosts(false);
+        return;
+      }
+      const response = await axios.post(
+        `${BaseUrl}/facebook-post-list`,
+        {
+          facebook_fanpage_id: [pageObj.facebook_fanpage_id],
+          content: '',
+        },
+        {
+          params: {
+            page,
+            pageSize: 10,
+          },
+        }
+      );
+      const postsData = (response.data.data?.data || []).map((post: any) => ({
+        post_id: post.facebook_post_id,
+        page_name: post.page_name,
+        created_at: post.created_at,
+        status: post.status,
+        message: post.content,
+        moderation_result: post.moderation_result || null,
+      }));
+      setPosts(postsData);
+      setTotalPages(Math.ceil((response.data.data?.totalCount || 0) / 10));
     } catch (err) {
       console.error('Error fetching posts:', err);
+      setPosts([]);
+      setTotalPages(1);
     } finally {
       setLoadingPosts(false);
     }
@@ -244,14 +299,6 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     ));
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center overflow-auto p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] overflow-auto relative">
@@ -262,7 +309,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
           </button>
         </div>
         <div className="p-6 max-w-7xl mx-auto">
-          <div className="mb-6">
+          <div className="mb-1">
             <h1 className="text-2xl font-bold mb-2">Giám sát và kiểm duyệt nội dung</h1>
             <p className="text-gray-600">
               Tự động giám sát và kiểm duyệt bài viết Facebook bằng AI
@@ -286,11 +333,14 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   Facebook Pages
                 </h2>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[420px] overflow-y-auto">
                   {pages.map((page) => (
                     <div
                       key={page.id}
-                      onClick={() => setSelectedPage(page.id)}
+                      onClick={() => {
+                        setSelectedPage(page.id);
+                        setPage(1);
+                      }}
                       className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-colors cursor-pointer ${
                         selectedPage === page.id
                           ? 'bg-blue-50 border-blue-200'
@@ -325,7 +375,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                           <div className="flex gap-2">
                             <button
                               onClick={(e) => {
-                                e.stopPropagation(); // block sự kiện onClick của parent
+                                e.stopPropagation();
                                 togglePageMonitoring(page.id);
                               }}
                               className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-red-600"
@@ -428,114 +478,69 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                     <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
                   </div>
                 ) : posts.length > 0 ? (
-                  <div className="space-y-4 mb-6">
+                  <div
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto"
+                    style={{
+                      maxHeight: '598px',
+                      minHeight: '160px',
+                      overflowY: posts.length > 6 ? 'auto' : 'unset',
+                    }}
+                  >
                     {posts.map((post) => (
-                      <div key={post.id} className="border rounded-lg overflow-hidden">
-                        <div className="p-3 sm:p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
-                                {post.page_avatar_url ? (
-                                  <img
-                                    src={post.page_avatar_url}
-                                    alt={post.page_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold">
-                                    {post.page_name?.charAt(0)}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium">{post.page_name}</h3>
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <span>{new Date(post.created_time).toLocaleString()}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-auto">
-                              {post.status === 'approved' ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              ) : post.status === 'violated' ? (
-                                <XCircle className="w-5 h-5 text-red-500" />
-                              ) : (
-                                <RefreshCw className="w-5 h-5 text-yellow-500" />
-                              )}
-                              <span
-                                className={`font-medium ${
-                                  post.status === 'approved'
-                                    ? 'text-green-600'
-                                    : post.status === 'violated'
-                                      ? 'text-red-600'
-                                      : 'text-yellow-600'
-                                }`}
-                              >
-                                {post.status === 'approved'
-                                  ? 'Hợp lệ'
-                                  : post.status === 'violated'
-                                    ? 'Vi phạm'
-                                    : 'Đang xử lý'}
+                      <div
+                        key={post.post_id}
+                        className="border rounded-lg bg-gray-50 hover:bg-white transition p-3 flex flex-col h-[150px] relative"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                            {post.page_avatar_url ? (
+                              <img
+                                src={post.page_avatar_url}
+                                alt={post.page_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-gray-500 font-bold">
+                                {post.page_name?.charAt(0)}
                               </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{post.page_name}</div>
+                            <div className="text-xs text-gray-400 truncate">
+                              {new Date(post.created_at).toLocaleDateString()}
                             </div>
                           </div>
-                          <p className="text-gray-800 mb-3">{post.message}</p>
-                          {post.moderation_result && post.moderation_result.violates && (
-                            <div className="bg-red-50 p-3 rounded-lg">
-                              <p className="text-sm font-medium text-red-700">
-                                Lý do vi phạm: {post.moderation_result.category}
-                              </p>
-                              <p className="text-sm text-red-600">
-                                {post.moderation_result.reason}
-                              </p>
-                              {post.moderation_result.confidence && (
-                                <p className="text-xs text-red-500 mt-1">
-                                  Độ tin cậy: {Math.round(post.moderation_result.confidence * 100)}%
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="bg-gray-50 px-4 py-2 flex justify-between items-center">
-                          <span className="text-sm text-gray-500">ID: {post.post_id}</span>
-                          <div className="flex gap-2">
-                            <a
-                              href={`https://facebook.com/${post.post_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 text-sm hover:underline"
-                            >
-                              Xem trên Facebook
-                            </a>
-                            {post.status === 'violated' && (
-                              <button className="text-green-600 text-sm hover:underline">
-                                Phê duyệt
-                              </button>
+                          <div>
+                            {post.status === 'approved' ? (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            ) : post.status === 'violated' ? (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4 text-yellow-500" />
                             )}
                           </div>
                         </div>
+                        <div className="flex-1 text-base text-gray-800 line-clamp-3 mb-2 flex items-center justify-center text-center">
+                          {post.message}
+                        </div>
+                        <div className="flex justify-between items-center mt-auto">
+                          <a
+                            href={`https://facebook.com/${post.post_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 text-xs hover:underline"
+                          >
+                            Xem Trên Facebook
+                          </a>
+                          {post.status === 'violated' && (
+                            <button className="text-green-600 text-xs hover:underline">
+                              Phê duyệt
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
-
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-6">
-                        <button
-                          onClick={() => setPage(Math.max(1, page - 1))}
-                          disabled={page === 1}
-                          className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <div className="flex items-center gap-1">{renderPagination()}</div>
-                        <button
-                          onClick={() => setPage(Math.min(totalPages, page + 1))}
-                          disabled={page === totalPages}
-                          className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-                        >
-                          <ChevronRight className="w-5 h-5" />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-gray-50 rounded-lg">
