@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { getAutomationConfig, updateAutomationConfig } from './automation';
+import { BaseUrl } from '../constants';
 
 export interface ModerationPrompt {
   id: string;
@@ -134,25 +135,59 @@ export interface AutoEngineConfig {
   autoCorrect: boolean;
   confidenceThreshold: number;
   prompt: string;
+  hidePost: boolean;
+  editContent: boolean;
+  notifyAdmin: boolean;
+  email: string;
+  volume: number;
 }
+
+// export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
+//   try {
+//     const config = await getAutomationConfig(pageId, 'moderation');
+//     return config.config;
+//   } catch (error) {
+//     console.error('Error getting page config:', error);
+//     return null;
+//   }
+// }
 
 export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
   try {
-    const config = await getAutomationConfig(pageId, 'moderation');
-    return config.config;
+    const response = await fetch(`${BaseUrl}/config-moderation?facebook_fanpage_id=${pageId}`);
+    if (!response.ok) throw new Error('Failed to fetch config');
+    return await response.json();
   } catch (error) {
     console.error('Error getting page config:', error);
     return null;
   }
 }
 
+// export async function updatePageConfig(pageId: string, config: AutoEngineConfig): Promise<void> {
+//   try {
+//     await updateAutomationConfig(pageId, 'moderation', {
+//       name: 'Content Moderation',
+//       description: 'Automated content moderation for Facebook page',
+//       config,
+//       is_active: true,
+//     });
+//   } catch (error) {
+//     console.error('Error updating page config:', error);
+//     throw error;
+//   }
+// }
+
 export async function updatePageConfig(pageId: string, config: AutoEngineConfig): Promise<void> {
   try {
-    await updateAutomationConfig(pageId, 'moderation', {
-      name: 'Content Moderation',
-      description: 'Automated content moderation for Facebook page',
-      config,
-      is_active: true,
+    await fetch('${BaseUrl}/config-moderation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        facebook_fanpage_id: pageId,
+        ...config,
+      }),
     });
   } catch (error) {
     console.error('Error updating page config:', error);

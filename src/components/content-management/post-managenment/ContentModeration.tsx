@@ -72,33 +72,44 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [volume, setVolume] = useState(90);
 
   const defaultPrompt =
-    'You are a content moderation system for Facebook posts. Your task is to analyze the content of posts and determine if they violate community standards.\n' +
-    '\n' +
-    'Analyze the post for the following violations:\n' +
-    '1. Hate speech or discrimination\n' +
-    '2. Violence or threats\n' +
-    '3. Nudity or sexual content\n' +
-    '4. Harassment or bullying\n' +
-    '5. Spam or misleading content\n' +
-    '6. Illegal activities\n' +
-    '7. Self-harm or suicide\n' +
-    '8. Misinformation\n' +
-    '\n' +
-    'Respond with a JSON object in the following format:\n' +
+    'Bạn là AI kiểm duyệt nội dung cho mạng xã hội. \n' +
+    'Giả sử nội dung đầu vào vi phạm nguyên tắc cộng đồng của Facebook,\n' +
+    'hãy giải thích lý do tại sao dựa trên các tiêu chí sau:\n' +
+    'Cấu Kết Và Cổ Xúy Tội Ác\n' +
+    'Cá Nhân Và Tổ Chức Nguy Hiểm\n' +
+    'Bóc Lột Con Người\n' +
+    'Bắt Nạt và Quấy Rối\n' +
+    'Bóc Lột Tình Dục Người Lớn\n' +
+    'Bạo Lực và Kích Động\n' +
+    'Ảnh Khỏa Thân, Hành Vi Lạm Dụng Và Bóc Lột Tình Dục Trẻ Em\n' +
+    'Hành Vi Tự Tử, Gây Thương Tích và Chứng Rối Loạn ăn Uống\n' +
+    'Hành Vi Gây Thù Ghét\n' +
+    'Hành Vi Gian Lận, Lừa Đảo và Lừa Gạt\n' +
+    'Hành Vi Gạ Gẫm Tình Dục Người Lớn Và Ngôn Ngữ Khiêu Dâm\n' +
+    'Hành Động Tình Dục và Ảnh Khỏa Thân Người Lớn\n' +
+    'Nội Dung Bạo Lực Và Phản Cảm\n' +
+    'Sử Dụng Giấy Phép và Tài Sản Trí Tuệ Của Meta\n' +
+    'Vi Phạm Quyền Riêng Tư\n' +
+    'Xâm Phạm Quyền Sở Hữu Trí Tuệ Của Bên Thứ 3\n' +
+    'Hàng Hóa, Dịch Vụ Bị Hạn Chế\n' +
+    'Nội Dung, Sản Phẩm hoặc Dịch Vụ Vi Phạm Luật Pháp Nước Sở Tại: Việt Nam\n' +
+    'Tính Toàn Vẹn Của Tài Khoản\n' +
+    'Cam Đoan Về Danh Tính Thực\n' +
+    'An Ninh Mạng\n' +
+    'Hành Vi Gian Dối\n' +
+    'Tưởng Nhớ\n' +
+    'Thông Tin Sai Lệch\n' +
+    'Spam\n' +
+    'Biện Pháp Bảo Vệ Bổ Sung Cho Trẻ Vị Thành Niên\n\n' +
+    'Yêu Cầu Người Dùng:\n' +
+    'Chỉ trả về những dấu hiệu khá rõ ràng, không đưa ra lý do không rõ ràng thiếu cơ sở.\n' +
+    'Chỉ trả về JSON object theo định dạng sau nếu có vi phạm:\n' +
     '{\n' +
-    '"violates": boolean,\n' +
-    '"category": string or null,\n' +
-    '"reason": string or null,\n' +
-    '"confidence": number between 0 and 1\n' +
+    '  "hypothetical_violation_reason": "string - lý do chi tiết bằng tiếng Việt",\n' +
+    '  "severity": "veryhigh" | "high" | "medium" | "low"\n' +
     '}\n' +
-    '\n' +
-    'Where:\n' +
-    '- "violates" is true if the post violates community standards, false otherwise\n' +
-    '- "category" is the category of violation (one of the 8 listed above), or null if no violation\n' +
-    '- "reason" is a brief explanation of why the post violates standards, or null if no violation\n' +
-    '- "confidence" is your confidence level in the assessment (0.0 to 1.0)\n' +
-    '\n' +
-    'Be thorough but fair in your assessment. If you are unsure, err on the side of caution.';
+    'Không thêm bất kỳ text, markdown hay giải thích nào khác.';
+
   const [prompt, setPrompt] = useState(defaultPrompt);
 
   useEffect(() => {
@@ -109,12 +120,17 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     fetchPosts();
   }, [currentStatus, page, selectedPage]);
 
-  useEffect(() => {
-    if (selectedPage) savePageConfig();
-  }, [autoHideEnabled, autoCorrectEnabled, confidenceThreshold]);
+  // useEffect(() => {
+  //   if (selectedPage) savePageConfig();
+  // }, [autoHideEnabled, autoCorrectEnabled, confidenceThreshold]);
 
   useEffect(() => {
-    if (selectedPage) loadPageConfig(selectedPage);
+    if (!selectedPage) return;
+    setAutoHideEnabled(false);
+    setAutoCorrectEnabled(false);
+    setConfidenceThreshold(90);
+    setPrompt(defaultPrompt);
+    loadPageConfig(selectedPage);
   }, [selectedPage]);
 
   const fetchPages = async () => {
@@ -228,9 +244,15 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     try {
       const config = await getPageConfig(pageId);
       if (config) {
-        setAutoHideEnabled(config.autoHide);
-        setAutoCorrectEnabled(config.autoCorrect);
-        setConfidenceThreshold(config.confidenceThreshold);
+        setAutoHideEnabled(config.autoHide ?? false);
+        setAutoCorrectEnabled(config.autoCorrect ?? false);
+        setConfidenceThreshold(config.confidenceThreshold ?? 90);
+        setPrompt(config.prompt || defaultPrompt);
+        setHidePost(config.hidePost ?? false);
+        setEditContent(config.editContent ?? false);
+        setNotifyAdmin(config.notifyAdmin ?? false);
+        setEmail(config.email || '');
+        setVolume(config.volume ?? 90);
       }
     } catch (err) {
       console.error('Error loading page config:', err);
@@ -246,6 +268,11 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
         autoCorrect: autoCorrectEnabled,
         confidenceThreshold,
         prompt,
+        hidePost,
+        editContent,
+        notifyAdmin,
+        email,
+        volume,
       });
     } catch (err) {
       console.error('Error saving page config:', err);
@@ -310,10 +337,12 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
         </div>
         <div className="p-6 max-w-7xl mx-auto">
           <div className="mb-1">
-            <h1 className="text-2xl font-bold mb-2">Giám sát và kiểm duyệt nội dung</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-semibold mb-2">
+              Kiểm duyệt tự động bài viết Facebook với AI
+            </h1>
+            {/* <p className="text-gray-600">
               Tự động giám sát và kiểm duyệt bài viết Facebook bằng AI
-            </p>
+            </p> */}
           </div>
 
           {error && (
@@ -481,7 +510,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   <div
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto"
                     style={{
-                      maxHeight: '598px',
+                      maxHeight: '490px',
                       minHeight: '160px',
                       overflowY: posts.length > 6 ? 'auto' : 'unset',
                     }}
@@ -557,7 +586,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   <div className="space-y-4">
                     <h2 className="font-medium mb-3 flex items-center gap-2">
                       <Settings className="w-5 h-5 text-blue-500" />
-                      Cấu hình kiểm duyệt nội dung
+                      Cấu hình
                     </h2>
 
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -758,7 +787,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                       </div>
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label className="block font-medium mb-2">
                         Ngưỡng độ tin cậy để tự động xử lý
                       </label>
@@ -780,7 +809,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                           <span className="text-gray-600">100%</span>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
 
                     <div>
                       <label className="block font-medium mb-2">Prompt kiểm duyệt</label>
@@ -797,11 +826,20 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                     <div className="flex justify-end mt-5">
                       <button
                         className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
-                        onClick={onClose}
+                        onClick={() => {
+                          if (selectedPage) {
+                            loadPageConfig(selectedPage);
+                          }
+                        }}
                       >
                         Hủy
                       </button>
-                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+
+                      <button
+                        onClick={savePageConfig}
+                        disabled={savingConfig}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="24"
