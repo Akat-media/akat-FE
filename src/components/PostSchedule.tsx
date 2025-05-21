@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -69,6 +69,11 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [dataPostDraft, setDataPostDraft] = useState<any>([]);
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImageDisabled, setIsImageDisabled] = useState(false);
+  const [isVideoDisabled, setIsVideoDisabled] = useState(false);
+  const [videos, setVideos] = useState<string[]>([]);
+  const [fileVideos, setFileVideos] = useState<any[]>([]);
 
   // thêm state để lưu trữ ngày nào đang mở rộng
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
@@ -382,6 +387,9 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [content, setContent] = useState('');
 
   const handleImageChange = (e: any) => {
+    setIsImageDisabled(false);
+    setIsVideoDisabled(true);
+
     const files = Array.from(e.target.files);
     const newImages = files.map((file: any) => URL.createObjectURL(file));
     setImages((prev: any) => [...prev, ...newImages]);
@@ -393,6 +401,70 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setIsVideoDisabled(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsImageDisabled(true);
+    setIsVideoDisabled(false);
+
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (files.length > 1) {
+      toast.error('Chỉ được phép upload một video duy nhất!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      event.target.value = ''; // Reset input để xóa các file đã chọn
+      return;
+    }
+
+    const MAX_SIZE_MB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    const file = files[0];
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.error(
+        `Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
+        {
+          position: 'top-right',
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+        }
+      );
+      event.target.value = ''; // Reset input
+      return;
+    }
+
+    // Xóa video cũ (nếu có) và chỉ lưu video mới
+    const newVideo = URL.createObjectURL(file);
+    setVideos([newVideo]);
+    setFileVideos([file]);
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setFileVideos((prev) => prev.filter((_, i) => i !== index));
+    setIsImageDisabled(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   function createFormData(data: any) {
@@ -753,6 +825,22 @@ function PostSchedule({ page }: PostScheduleProps) {
                       ))}
                     </div>
                   )}
+
+                  {videos.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {videos.map((vid: string, index: number) => (
+                        <div key={index} className="relative w-32 h-32 video-exist">
+                          <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            onClick={() => handleRemoveVideo(index)}
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* AI suggestion */}
@@ -868,6 +956,18 @@ function PostSchedule({ page }: PostScheduleProps) {
                       className="hidden"
                       id="imageUpload"
                       onChange={handleImageChange}
+                      disabled={isImageDisabled}
+                      ref={fileInputRef}
+                    />
+                    <input
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      className="hidden"
+                      id="videoUpload"
+                      disabled={isVideoDisabled}
+                      onChange={handleVideoChange}
+                      ref={fileInputRef}
                     />
                     <label
                       htmlFor="imageUpload"
@@ -876,26 +976,35 @@ function PostSchedule({ page }: PostScheduleProps) {
                       <Image className="w-5 h-5" />
                       <span className="text-sm">Ảnh</span>
                     </label>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">
+                    <label
+                      htmlFor="videoUpload"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors cursor-pointer"
+                    >
                       <Video className="w-5 h-5" />
                       <span className="text-sm">Video</span>
-                    </button>
+                    </label>
+                    {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">*/}
+                    {/*  <Video className="w-5 h-5" />*/}
+                    {/*  <span className="text-sm">Video</span>*/}
+                    {/*</button>*/}
                     <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">
                       <Camera className="w-5 h-5" />
                       <span className="text-sm">Story</span>
                     </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors">
-                      <MapPin className="w-5 h-5" />
-                      <span className="text-sm">Check in</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
-                      <Tag className="w-5 h-5" />
-                      <span className="text-sm">Gắn thẻ</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">
-                      <Users className="w-5 h-5" />
-                      <span className="text-sm">Cảm xúc</span>
-                    </button>
+                    {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors">*/}
+                    {/*  <MapPin className="w-5 h-5" />*/}
+                    {/*  <span className="text-sm">Check in</span>*/}
+                    {/*</button>*/}
+
+                    {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">*/}
+                    {/*  <Tag className="w-5 h-5" />*/}
+                    {/*  <span className="text-sm">Gắn thẻ</span>*/}
+                    {/*</button>*/}
+                    {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">*/}
+                    {/*  <Users className="w-5 h-5" />*/}
+                    {/*  <span className="text-sm">Cảm xúc</span>*/}
+                    {/*</button>*/}
+
                   </div>
                 </div>
 
