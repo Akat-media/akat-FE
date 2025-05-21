@@ -210,14 +210,13 @@ function ContentModerationPage() {
       alert('Có lỗi xảy ra khi thay đổi trạng thái giám sát.');
     }
   };
-
   const loadPageConfig = async (pageId: string) => {
     try {
       const config = await getPageConfig(pageId);
       if (config) {
-        setAutoHideEnabled(config.autoHide);
-        setAutoCorrectEnabled(config.autoCorrect);
-        setConfidenceThreshold(config.confidenceThreshold);
+        setAutoHideEnabled(config.auto_moderation ?? false);
+        setAutoCorrectEnabled(config.auto_correct ?? false);
+        setConfidenceThreshold(config.confidence_threshold ?? 90);
       } else {
         setAutoHideEnabled(true);
         setAutoCorrectEnabled(false);
@@ -233,11 +232,17 @@ function ContentModerationPage() {
 
     try {
       setSavingConfig(true);
-      await updatePageConfig(selectedPage, {
-        autoHide: autoHideEnabled,
-        autoCorrect: autoCorrectEnabled,
-        confidenceThreshold,
-        prompt: 'You are a content moderation system...',
+      await updatePageConfig({
+        facebook_fanpage_id: selectedPage,
+        auto_moderation: autoHideEnabled,
+        auto_correct: autoCorrectEnabled,
+        confidence_threshold: confidenceThreshold,
+        prompt,
+        hide_post_violations: hidePost,
+        edit_minor_content: editContent,
+        notify_admin: notifyAdmin,
+        admin_email: email,
+        threshold: volume,
       });
     } catch (err) {
       console.error('Error saving page config:', err);
@@ -251,11 +256,17 @@ function ContentModerationPage() {
     if (!selectedPage) return;
     try {
       setSavingConfig(true);
-      await updatePageConfig(selectedPage, {
-        autoHide: autoHideEnabled,
-        autoCorrect: autoCorrectEnabled,
-        confidenceThreshold,
-        prompt: 'You are a content moderation system...',
+      await updatePageConfig({
+        facebook_fanpage_id: selectedPage,
+        auto_moderation: autoHideEnabled,
+        auto_correct: autoCorrectEnabled,
+        confidence_threshold: confidenceThreshold,
+        prompt,
+        hide_post_violations: hidePost,
+        edit_minor_content: editContent,
+        notify_admin: notifyAdmin,
+        admin_email: email,
+        threshold: volume,
       });
       alert('Cấu hình đã được lưu!');
     } catch (err) {
@@ -265,7 +276,6 @@ function ContentModerationPage() {
       setSavingConfig(false);
     }
   };
-
   const addEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (newEmail && emailRegex.test(newEmail) && !emails.includes(newEmail)) {
