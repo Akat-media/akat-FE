@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
+import { BaseUrlSocket } from '../../constants';
 
-const socket = io('http://127.0.0.1:4000', {
+const socket = io(BaseUrlSocket, {
   transports: ['websocket'],
   withCredentials: true, // nếu backend yêu cầu cookie/session
 });

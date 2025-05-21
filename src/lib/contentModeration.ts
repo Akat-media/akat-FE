@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { getAutomationConfig, updateAutomationConfig } from './automation';
+import { BaseUrl } from '../constants';
+import axios from 'axios';
 
 export interface ModerationPrompt {
   id: string;
@@ -130,29 +132,61 @@ export async function getFacebookPages(
 }
 
 export interface AutoEngineConfig {
-  autoHide: boolean;
-  autoCorrect: boolean;
-  confidenceThreshold: number;
+  auto_moderation: boolean;
+  auto_correct: boolean;
+  confidence_threshold: number;
   prompt: string;
+  hide_post_violations: boolean;
+  edit_minor_content: boolean;
+  notify_admin: boolean;
+  admin_email: string;
+  threshold: number;
 }
 
-export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
+// export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
+//   try {
+//     const config = await getAutomationConfig(pageId, 'moderation');
+//     return config.config;
+//   } catch (error) {
+//     console.error('Error getting page config:', error);
+//     return null;
+//   }
+// }
+
+export async function getPageConfig(facebookFanpageId: string): Promise<AutoEngineConfig | null> {
   try {
-    const config = await getAutomationConfig(pageId, 'moderation');
-    return config.config;
+    const response = await axios.get(`${BaseUrl}/config-moderation`, {
+      params: {
+        facebook_fanpage_id: facebookFanpageId,
+      },
+    });
+    return response.data?.data || null;
   } catch (error) {
     console.error('Error getting page config:', error);
     return null;
   }
 }
 
-export async function updatePageConfig(pageId: string, config: AutoEngineConfig): Promise<void> {
+// export async function updatePageConfig(pageId: string, config: AutoEngineConfig): Promise<void> {
+//   try {
+//     await updateAutomationConfig(pageId, 'moderation', {
+//       name: 'Content Moderation',
+//       description: 'Automated content moderation for Facebook page',
+//       config,
+//       is_active: true,
+//     });
+//   } catch (error) {
+//     console.error('Error updating page config:', error);
+//     throw error;
+//   }
+// }
+
+export async function updatePageConfig(config: any): Promise<void> {
   try {
-    await updateAutomationConfig(pageId, 'moderation', {
-      name: 'Content Moderation',
-      description: 'Automated content moderation for Facebook page',
-      config,
-      is_active: true,
+    await axios.post(`${BaseUrl}/config-moderation`, config, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   } catch (error) {
     console.error('Error updating page config:', error);

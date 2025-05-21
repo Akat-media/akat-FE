@@ -676,26 +676,23 @@ function PostManagementPage() {
                 </div>
               ) : comments.length > 0 ? (
                 <ul className="space-y-4">
-                  {comments.map((comment, index) => (
-                    <li key={index} className="flex gap-4">
-                      <img
-                        src={comment.user_avatar || defaultImage}
-                        alt={comment.user_name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="bg-gray-100 p-3 rounded-lg">
-                          <p className="font-semibold">{comment.user_name}</p>
-                          <p className="text-sm text-gray-700">{comment.message}</p>
+                  {comments
+                    .filter((comment) => comment.message && comment.message.trim() !== '')
+                    .map((comment, index) => (
+                      <li key={index} className="flex gap-4">
+                        <img
+                          src={comment.user_avatar || defaultImage}
+                          alt={comment.user_name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <div className="bg-gray-100 p-3 rounded-lg">
+                            <p className="font-semibold">{comment.user_name}</p>
+                            <p className="text-sm text-gray-700">{comment.message}</p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                          <button className="hover:underline">Like</button>
-                          <button className="hover:underline">Reply</button>
-                          <span>{comment.timestamp}</span>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    ))}
                 </ul>
               ) : (
                 <div className="text-center text-gray-500">Không có bình luận nào</div>
