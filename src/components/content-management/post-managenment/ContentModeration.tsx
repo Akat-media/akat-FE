@@ -15,6 +15,7 @@ import {
   Route,
   Send,
 } from 'lucide-react';
+import { useMonitoringStore } from '../../../store/monitoringStore';
 import {
   getModeratedPosts,
   getUserFacebookPages,
@@ -33,6 +34,7 @@ interface MonitoredPage {
   avatarUrl?: string;
   followerCount?: number;
   isMonitored: boolean;
+  autoModerationEnabled?: boolean;
 }
 
 type Props = {
@@ -45,10 +47,14 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setPageMonitoring, initializeMonitoring } = useMonitoringStore();
   const [selectedPage, setSelectedPage] = useState<string | null>(null);
   const [pages, setPages] = useState<MonitoredPage[]>([]);
   const [posts, setPosts] = useState<FacebookPost[]>([]);
-  const [currentStatus, setCurrentStatus] = useState<'all' | 'pending' | 'approved' | 'violated'>(
+  // const [currentStatus, setCurrentStatus] = useState<'all' | 'pending' | 'approved' | 'violated'>(
+  //   'all'
+  // );
+  const [violationFilter, setViolationFilter] = useState<'all' | 'has_violation' | 'no_violation'>(
     'all'
   );
   const [page, setPage] = useState(1);
@@ -70,6 +76,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [email, setEmail] = useState('akamedia@gmail.com');
   const [volume, setVolume] = useState(90);
   const [threshold, setThreshold] = useState(90);
+  const [pageSize, setPageSize] = useState(6);
 
   const defaultPrompt =
     'Bạn là AI kiểm duyệt nội dung cho mạng xã hội. \n' +
@@ -118,7 +125,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
 
   useEffect(() => {
     fetchPosts();
-  }, [currentStatus, page, selectedPage]);
+  }, [page, selectedPage]);
 
   // useEffect(() => {
   //   if (selectedPage) savePageConfig();
@@ -157,10 +164,29 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
           name: conn.name || 'Unnamed Page',
           avatarUrl: conn.image_url,
           followerCount: conn.follows || 0,
-          isMonitored: false,
+          isMonitored: useMonitoringStore.getState().getPageMonitoring(conn.id) ?? false,
         })) || [];
 
-      setPages(monitoredPages);
+      const pagesWithConfig = await Promise.all(
+        monitoredPages.map(async (page) => {
+          try {
+            const config = await getPageConfig(page.facebook_fanpage_id);
+            return {
+              ...page,
+              autoModerationEnabled: config?.auto_moderation ?? false,
+            };
+          } catch (err) {
+            console.error('Lỗi lấy cấu hình cho fanpage:', page.name);
+            return {
+              ...page,
+              autoModerationEnabled: false,
+            };
+          }
+        })
+      );
+
+      setPages(pagesWithConfig);
+      initializeMonitoring(monitoredPages.map((page) => page.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error fetching pages:', err);
@@ -194,7 +220,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
         {
           params: {
             page,
-            pageSize: 10,
+            pageSize,
           },
         }
       );
@@ -207,7 +233,8 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
         moderation_result: post.moderation_result || null,
       }));
       setPosts(postsData);
-      setTotalPages(Math.ceil((response.data.data?.totalCount || 0) / 10));
+      const totalCount = response.data.data?.totalCount || 0;
+      setTotalPages(Math.ceil(totalCount / pageSize));
     } catch (err) {
       console.error('Error fetching posts:', err);
       setPosts([]);
@@ -244,6 +271,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
       setPages((prev) =>
         prev.map((p) => (p.id === pageId ? { ...p, isMonitored: !p.isMonitored } : p))
       );
+      await setPageMonitoring(pageId, !originalState);
       setShowToggleConfirm(null);
     } catch (err) {
       console.error('Error toggling monitoring:', err);
@@ -286,6 +314,11 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
       setSavingConfig(true);
       const config = buildModerationConfigPayload();
       await updatePageConfig(config);
+      setPages((prev) =>
+        prev.map((p) =>
+          p.id === selectedPage ? { ...p, autoModerationEnabled: autoHideEnabled } : p
+        )
+      );
       toast.success('Cấu hình đã được lưu thành công!', {
         position: 'top-right',
         autoClose: 2000,
@@ -356,6 +389,15 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
       </button>
     ));
   };
+  const filteredPosts = posts.filter((post) => {
+    if (violationFilter === 'has_violation') {
+      return !!post.moderation_result?.hypothetical_violation_reason;
+    }
+    if (violationFilter === 'no_violation') {
+      return !post.moderation_result?.hypothetical_violation_reason;
+    }
+    return true;
+  });
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center overflow-auto p-4">
@@ -436,15 +478,6 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                togglePageMonitoring(page.id);
-                              }}
-                              className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-red-600"
-                            >
-                              {page.isMonitored ? 'Tạm dừng' : 'Kích hoạt'}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
                                 setShowToggleConfirm(null);
                               }}
                               className="px-3 py-1.5 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
@@ -453,29 +486,25 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowToggleConfirm(page.id);
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-colors w-full sm:w-auto min-w-[120px] text-sm ${
-                              page.isMonitored
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          <div
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded min-w-[120px] text-sm font-medium border ${
+                              selectedPage === page.id && autoHideEnabled
+                                ? 'bg-green-100 text-green-700 border-green-300'
+                                : 'bg-gray-100 text-gray-700 border-gray-300'
                             }`}
                           >
-                            {page.isMonitored ? (
+                            {page.autoModerationEnabled ? (
                               <>
-                                <CheckCircle className="w-4 h-4" />
+                                <CheckCircle className="w-4 h-4 text-green-500" />
                                 <span>Đang giám sát</span>
                               </>
                             ) : (
                               <>
-                                <XCircle className="w-4 h-4" />
+                                <XCircle className="w-4 h-4 text-gray-500" />
                                 <span>Đã tạm dừng</span>
                               </>
                             )}
-                          </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -491,44 +520,22 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => setCurrentStatus('all')}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        currentStatus === 'all'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
+                      onClick={() => setViolationFilter('all')}
+                      className={`px-3 py-1 rounded-lg text-sm ${violationFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}
                     >
                       Tất cả
                     </button>
                     <button
-                      onClick={() => setCurrentStatus('pending')}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        currentStatus === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
+                      onClick={() => setViolationFilter('has_violation')}
+                      className={`px-3 py-1 rounded-lg text-sm ${violationFilter === 'has_violation' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}
                     >
-                      Đang xử lý
+                      Có vi phạm
                     </button>
                     <button
-                      onClick={() => setCurrentStatus('approved')}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        currentStatus === 'approved'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
+                      onClick={() => setViolationFilter('no_violation')}
+                      className={`px-3 py-1 rounded-lg text-sm ${violationFilter === 'no_violation' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
                     >
-                      Hợp lệ
-                    </button>
-                    <button
-                      onClick={() => setCurrentStatus('violated')}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        currentStatus === 'violated'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      Vi phạm
+                      Không vi phạm
                     </button>
                   </div>
                 </div>
@@ -537,16 +544,15 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
                   </div>
-                ) : posts.length > 0 ? (
+                ) : filteredPosts.length > 0 ? (
                   <div
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3"
                     style={{
-                      maxHeight: '490px',
                       minHeight: '160px',
-                      overflowY: posts.length > 6 ? 'auto' : 'unset',
+                      overflow: 'visible',
                     }}
                   >
-                    {posts.map((post) => (
+                    {filteredPosts.map((post) => (
                       <div
                         key={post.post_id}
                         className="border rounded-lg bg-gray-50 hover:bg-white transition p-3 flex flex-col h-[150px] relative"
@@ -572,12 +578,10 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                             </div>
                           </div>
                           <div>
-                            {post.status === 'approved' ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : post.status === 'violated' ? (
+                            {post.moderation_result?.hypothetical_violation_reason ? (
                               <XCircle className="w-4 h-4 text-red-500" />
                             ) : (
-                              <RefreshCw className="w-4 h-4 text-yellow-500" />
+                              <CheckCircle className="w-4 h-4 text-green-500" />
                             )}
                           </div>
                         </div>
@@ -613,6 +617,21 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                     <p className="text-gray-500">Chưa có bài viết nào được kiểm duyệt</p>
                   </div>
                 )}
+                <div className="mt-4 flex justify-end gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setPage(i + 1)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                        i + 1 === page
+                          ? 'bg-blue-100 text-blue-700 font-medium'
+                          : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

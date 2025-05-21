@@ -24,6 +24,7 @@ export interface FacebookPost {
     reason: string | null;
     confidence: number | null;
     processed_at: string;
+    hypothetical_violation_reason?: string;
   };
   moderated_at?: string;
   created_at: string;
