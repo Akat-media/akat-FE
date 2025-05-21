@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   X,
   Image,
@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
-import { toast } from 'react-toastify';
+import { toast,ToastContainer } from 'react-toastify';
 import LoadingContent from './content-management/post-managenment/LoadingContent.tsx';
 import { debounce } from 'lodash';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface NewPostModalProps {
   page: any;
@@ -79,27 +80,47 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videos, setVideos] = useState<string[]>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
-  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [photoStories, setPhotoStories] = useState<string[]>([]);
+  const [videoStories, setVideoStories] = useState<string[]>([]);
+  const [status, setStatus] = useState('');
+  const [isStoryOptionsOpen, setIsStoryOptionsOpen] = useState(false);
+  const [fileImages, setFileImages] = useState<File[]>([]);
+  const [isImageDisabled, setIsImageDisabled] = useState(false);
+  const [isVideoDisabled, setIsVideoDisabled] = useState(false);
 
+
+  //test
+  const handleStoryClick = () => {
+    setIsStoryOptionsOpen(!isStoryOptionsOpen);
+  };
+
+  const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Chỉ cho phép upload 1 file
+    if (files.length > 1) {
+      toast.error('Chỉ được phép upload một ảnh hoặc video duy nhất!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      e.target.value = '';
+      return;
+    }
+
+    const file = files[0];
     const MAX_SIZE_MB = 100;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-    const validFiles: File[] = [];
-    const rejectedFiles: string[] = [];
-
-    Array.from(files).forEach((file) => {
-      if (file.size <= MAX_SIZE_BYTES) {
-        validFiles.push(file);
-      } else {
-        rejectedFiles.push(file.name);
-      }
-    });
-
-    if (rejectedFiles.length > 0) {
+    if (file.size > MAX_SIZE_BYTES) {
       toast.error(
-        `Các video sau vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối:\n${rejectedFiles.join('\n')}`,
+        `File "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
         {
           position: 'top-right',
           autoClose: 2000,
@@ -110,17 +131,105 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
           progress: undefined,
         }
       );
+      e.target.value = '';
+      return;
     }
 
-    const newVideos = validFiles.map((file) => URL.createObjectURL(file));
-    setVideos((prev) => [...prev, ...newVideos]);
-    setFileVideos((prev) => [...prev, ...validFiles]);
+    const fileURL = URL.createObjectURL(file);
+
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const isImage = file.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+    const isVideo = file.type.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExtension || '');
+
+    if (isImage) {
+      setStatus('photoStories');
+      setPhotoStories([fileURL]);
+      setFileImages([file]);
+    } else if (isVideo) {
+      setStatus('videoStories');
+      setVideoStories([fileURL]);
+      setFileVideos([file]);
+    } else {
+      toast.error('Vui lòng chọn file ảnh hoặc video hợp lệ!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      e.target.value = '';
+      return;
+    }
+  }
+
+
+
+  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsImageDisabled(true);
+    setIsVideoDisabled(false);
+
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (files.length > 1) {
+      toast.error('Chỉ được phép upload một video duy nhất!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      event.target.value = ''; // Reset input để xóa các file đã chọn
+      return;
+    }
+
+    const MAX_SIZE_MB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    const file = files[0];
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.error(
+        `Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
+        {
+          position: 'top-right',
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+        }
+      );
+      event.target.value = ''; // Reset input
+      return;
+    }
+
+    // Xóa video cũ (nếu có) và chỉ lưu video mới
+    const newVideo = URL.createObjectURL(file);
+    setVideos([newVideo]);
+    setFileVideos([file]);
+
   };
 
   const handleRemoveVideo = (index: number) => {
     setVideos((prev) => prev.filter((_, i) => i !== index));
+    setFileVideos((prev) => prev.filter((_, i) => i !== index));
+    setIsImageDisabled(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
+
   const handleImageChange = (e: any) => {
+    setIsImageDisabled(false);
+    setIsVideoDisabled(true);
+
     const files = Array.from(e.target.files);
     const newImages = files.map((file: any) => URL.createObjectURL(file));
     setImages((prev: any) => [...prev, ...newImages]);
@@ -145,12 +254,27 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   }
   const handleCreateAndSchedulePost = async () => {
     try {
+
       setIsLoading(true);
       const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       console.log('now', now.toISOString());
       console.log('Số lượng files gửi đi:', files.length);
+
+      let type = "";
+      if(images.length > 0) {
+        type = "";
+      } else if (videos.length > 0) {
+        type = "video";
+      } else if (photoStories.length > 0) {
+        type = "photo_stories";
+      } else if (videoStories.length > 0) {
+        type = "video_stories";
+      }
+
       const body: any = createFormData({
         files: [...files, ...fileVideos],
+        // files: [...fileVideos],
         content: content,
         likes: '0',
         comments: '0',
@@ -158,9 +282,10 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         status: 'pending',
         access_token: page?.access_token[0] || '',
         posted_at: now.toISOString(),
-        scheduledTime: now.toISOString(),
+        scheduledTime: yesterday.toISOString(),
         facebook_fanpage_id: page?.facebook_fanpage_id,
         page_name: page?.name,
+        type: type,
       });
       for (const [key, value] of body.entries()) {
         console.log(`${key}: ${value}`);
@@ -221,6 +346,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setIsVideoDisabled(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleChange = (e: any) => {
@@ -271,6 +401,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [lons, setLons] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<Position | null>(null);
+
+  const storyInputRef = useRef<HTMLInputElement>(null);
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
@@ -428,12 +560,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 </div>
               </div>
             </div>
+
             <button
               className={`flex gap-2 px-4 py-2 rounded-full 
                 ${uploadProgress === 100 ? 'bg-green-800 text-[white]' : 'bg-slate-200'}`}
             >
               <Upload /> {` ${uploadProgress}%`}
             </button>
+
             {/* Content Input */}
             <div className="min-h-[180px] bg-gray-50 rounded-2xl p-5">
               <textarea
@@ -471,6 +605,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 </div>
               )}
             </div>
+
             {images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
                 {images.map((img: any, index: any) => (
@@ -480,7 +615,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   //   alt={`upload-${index}`}
                   //   className="w-32 h-32 object-cover rounded-lg"
                   // />
-                  <div key={index} className="relative w-32 h-32">
+                  <div key={index} className="relative w-32 h-32 image-exist">
                     <img
                       src={img}
                       alt={`upload-${index}`}
@@ -496,10 +631,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 ))}
               </div>
             )}
+
             {videos.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
                 {videos.map((vid: string, index: number) => (
-                  <div key={index} className="relative w-32 h-32">
+                  <div key={index} className="relative w-32 h-32 video-exist">
                     <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
                     <button
                       onClick={() => handleRemoveVideo(index)}
@@ -511,6 +647,48 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 ))}
               </div>
             )}
+
+
+            <div className="p-4">
+              {status === 'photoStories' && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {photoStories.map((img: any, index: any) => (
+                    <div key={index} className="relative w-32 h-32 image-exist">
+                      <img
+                        src={img}
+                        alt={`upload-${index}`}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {status === 'videoStories' && (
+                <div className="mt-4 flex flex-wrap gap-3 video">
+                  {videoStories.map((vid: string, index: number) => (
+                    <div key={index} className="relative w-32 h-32 video-exist">
+                      <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                      <button
+                        onClick={() => handleRemoveVideo(index)}
+                        className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/*<ToastContainer />*/}
+            </div>
+
             {/* AI Suggestions */}
             {!showAiSuggestions && !visible ? (
               <button
@@ -626,7 +804,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   multiple
                   className="hidden"
                   id="imageUpload"
+                  disabled={isImageDisabled}
                   onChange={handleImageChange}
+                  ref={fileInputRef}
                 />
                 <input
                   type="file"
@@ -634,8 +814,30 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   multiple
                   className="hidden"
                   id="videoUpload"
+                  disabled={isVideoDisabled}
                   onChange={handleVideoChange}
+                  ref={fileInputRef}
                 />
+                {/*<input*/}
+                {/*  type="file"*/}
+                {/*  accept="image/*,video/*"*/}
+                {/*  multiple*/}
+                {/*  className="hidden"*/}
+                {/*  id="storyUpload"*/}
+                {/*  disabled={isVideoDisabled}*/}
+                {/*  onChange={handleStoryChange}*/}
+                {/*  ref={fileInputRef}*/}
+                {/*/>*/}
+                <input
+                  ref={storyInputRef}
+                  id="storyInput"
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={handleStoryChange}
+                  className="hidden"
+                />
+
+
                 <label
                   htmlFor="imageUpload"
                   className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors cursor-pointer"
@@ -643,6 +845,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   <Image className="w-5 h-5" />
                   <span className="text-sm">Ảnh</span>
                 </label>
+
                 <label
                   htmlFor="videoUpload"
                   className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors cursor-pointer"
@@ -650,17 +853,26 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   <Video className="w-5 h-5" />
                   <span className="text-sm">Video</span>
                 </label>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">
+
+                <label
+                  htmlFor="storyInput"
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors cursor-pointer"
+                >
                   <Camera className="w-5 h-5" />
                   <span className="text-sm">Story</span>
-                </button>
-                <button
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors"
-                  onClick={openModal}
-                >
-                  <MapPin className="w-5 h-5" />
-                  <span className="text-sm">Check in</span>
-                </button>
+                </label>
+
+                {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">*/}
+                {/*  <Camera className="w-5 h-5" />*/}
+                {/*  <span className="text-sm">Story</span>*/}
+                {/*</button>*/}
+                {/*<button*/}
+                {/*  className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors"*/}
+                {/*  onClick={openModal}*/}
+                {/*>*/}
+                {/*  <MapPin className="w-5 h-5" />*/}
+                {/*  <span className="text-sm">Check in</span>*/}
+                {/*</button>*/}
                 {/* <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
 
                 {/* Modal */}
@@ -798,14 +1010,15 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   </div>
                 )}
 
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">
-                  <Tag className="w-5 h-5" />
-                  <span className="text-sm">Gắn thẻ</span>
-                </button>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">
-                  <Users className="w-5 h-5" />
-                  <span className="text-sm">Cảm xúc</span>
-                </button>
+                {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-yellow-600 transition-colors">*/}
+                {/*  <Tag className="w-5 h-5" />*/}
+                {/*  <span className="text-sm">Gắn thẻ</span>*/}
+                {/*</button>*/}
+                {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-red-600 transition-colors">*/}
+                {/*  <Users className="w-5 h-5" />*/}
+                {/*  <span className="text-sm">Cảm xúc</span>*/}
+                {/*</button>*/}
+
               </div>
             </div>
           </div>
