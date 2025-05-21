@@ -15,7 +15,6 @@ import {
   Route,
   Send,
 } from 'lucide-react';
-import { useMonitoringStore } from '../../../store/monitoringStore';
 import {
   getModeratedPosts,
   getUserFacebookPages,
@@ -25,6 +24,7 @@ import {
 } from '../../../lib/contentModeration';
 import axios from 'axios';
 import { BaseUrl } from '../../../constants';
+import { toast } from 'react-toastify';
 
 interface MonitoredPage {
   id: string;
@@ -45,7 +45,6 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const user = localStorage.getItem('user');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { setPageMonitoring, initializeMonitoring } = useMonitoringStore();
   const [selectedPage, setSelectedPage] = useState<string | null>(null);
   const [pages, setPages] = useState<MonitoredPage[]>([]);
   const [posts, setPosts] = useState<FacebookPost[]>([]);
@@ -56,7 +55,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [confidenceThreshold, setConfidenceThreshold] = useState(90);
-  const [autoHideEnabled, setAutoHideEnabled] = useState(true);
+  const [autoHideEnabled, setAutoHideEnabled] = useState(false);
   const [autoCorrectEnabled, setAutoCorrectEnabled] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [showToggleConfirm, setShowToggleConfirm] = useState<string | null>(null);
@@ -158,11 +157,10 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
           name: conn.name || 'Unnamed Page',
           avatarUrl: conn.image_url,
           followerCount: conn.follows || 0,
-          isMonitored: useMonitoringStore.getState().getPageMonitoring(conn.id) ?? false,
+          isMonitored: false,
         })) || [];
 
       setPages(monitoredPages);
-      initializeMonitoring(monitoredPages.map((page) => page.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error fetching pages:', err);
@@ -246,7 +244,6 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
       setPages((prev) =>
         prev.map((p) => (p.id === pageId ? { ...p, isMonitored: !p.isMonitored } : p))
       );
-      await setPageMonitoring(pageId, !originalState);
       setShowToggleConfirm(null);
     } catch (err) {
       console.error('Error toggling monitoring:', err);
@@ -289,10 +286,26 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
       setSavingConfig(true);
       const config = buildModerationConfigPayload();
       await updatePageConfig(config);
-      alert('Cấu hình đã được lưu thành công!');
+      toast.success('Cấu hình đã được lưu thành công!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
     } catch (err) {
       console.error('Lỗi khi lưu cấu hình:', err);
-      alert('Không thể lưu cấu hình.');
+      toast.error('Cấu hình lưu thất bại!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
     } finally {
       setSavingConfig(false);
     }

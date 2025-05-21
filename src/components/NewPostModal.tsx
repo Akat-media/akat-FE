@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
-import { toast,ToastContainer } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import LoadingContent from './content-management/post-managenment/LoadingContent.tsx';
 import { debounce } from 'lodash';
 import 'react-toastify/dist/ReactToastify.css';
@@ -43,7 +43,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [ask, setAsk] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [visible, setVisible] = useState(false);
-  // console.log('page', page);
   const [loading, setLoading] = useState(false);
 
   const generateSuggestions = async () => {
@@ -89,12 +88,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
 
-
-  //test
-  const handleStoryClick = () => {
-    setIsStoryOptionsOpen(!isStoryOptionsOpen);
-  };
-
   const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -119,18 +112,15 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
     if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `File "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
-        {
-          position: 'top-right',
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: false,
-          progress: undefined,
-        }
-      );
+      toast.error(`File "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
       e.target.value = '';
       return;
     }
@@ -138,8 +128,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     const fileURL = URL.createObjectURL(file);
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    const isImage = file.type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
-    const isVideo = file.type.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExtension || '');
+    const isImage =
+      file.type.startsWith('image/') ||
+      ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+    const isVideo =
+      file.type.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExtension || '');
 
     if (isImage) {
       setStatus('photoStories');
@@ -162,9 +155,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       e.target.value = '';
       return;
     }
-  }
-
-
+  };
 
   const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsImageDisabled(true);
@@ -193,18 +184,15 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     const file = files[0];
 
     if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
-        {
-          position: 'top-right',
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: false,
-          progress: undefined,
-        }
-      );
+      toast.error(`Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
       event.target.value = ''; // Reset input
       return;
     }
@@ -213,17 +201,16 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     const newVideo = URL.createObjectURL(file);
     setVideos([newVideo]);
     setFileVideos([file]);
-
   };
 
   const handleRemoveVideo = (index: number) => {
-    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideoStories((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = '';
+    // }
   };
 
   const handleImageChange = (e: any) => {
@@ -254,27 +241,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   }
   const handleCreateAndSchedulePost = async () => {
     try {
-
       setIsLoading(true);
       const now = new Date();
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      console.log('now', now.toISOString());
-      console.log('Số lượng files gửi đi:', files.length);
-
-      let type = "";
-      if(images.length > 0) {
-        type = "";
-      } else if (videos.length > 0) {
-        type = "video";
-      } else if (photoStories.length > 0) {
-        type = "photo_stories";
-      } else if (videoStories.length > 0) {
-        type = "video_stories";
-      }
-
-      const body: any = createFormData({
+      const payload: any = {
         files: [...files, ...fileVideos],
-        // files: [...fileVideos],
         content: content,
         likes: '0',
         comments: '0',
@@ -285,11 +256,21 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         scheduledTime: yesterday.toISOString(),
         facebook_fanpage_id: page?.facebook_fanpage_id,
         page_name: page?.name,
-        type: type,
-      });
-      for (const [key, value] of body.entries()) {
-        console.log(`${key}: ${value}`);
+      };
+      if (images.length > 0) {
+        payload['type'] = '';
+      } else if (videos.length > 0) {
+        payload['type'] = 'video';
+      } else if (photoStories.length > 0) {
+        payload['type'] = 'photo_stories';
+        payload['files'] = fileImages;
+      } else if (videoStories.length > 0) {
+        payload['type'] = 'video_stories';
+        payload['files'] = fileVideos;
       }
+      console.log(payload);
+      const body: any = createFormData(payload);
+      // return;
       const res = await axios
         .post(`${BaseUrl}/facebook-schedule`, body, {
           headers: {
@@ -346,11 +327,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setFiles((prev: any) => prev.filter((_: any, i: number) => i !== indexToRemove));
+    setPhotoStories([]);
+    setFileImages([]);
     setIsVideoDisabled(false);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = '';
+    // }
   };
 
   const handleChange = (e: any) => {
@@ -395,8 +379,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   };
 
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [locations, setLocations] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [locations, setLocations] = useState('');
   const [lats, setLats] = useState('');
   const [lons, setLons] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -407,31 +391,29 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
-    setSearchTerm("");
-    setLocations("");
+    setSearchTerm('');
+    setLocations('');
   };
 
-  const search = useCallback(
-    async(searchQuery: string)=> {
-      try {
-        setLoading(true);
-        setError(null);
+  const search = useCallback(async (searchQuery: string) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const response = await axios.get(`${BaseUrl}/places`, {
-          params: {
-            q: searchQuery,
-          },
-        });
-        setLats(response.data.data.lat);
-        setLons(response.data.data.lon);
-        setLocations(response.data.data.display_name)
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Failed to fetch results');
-      } finally {
-        setLoading(false);
-      }
-    },[]
-  );
+      const response = await axios.get(`${BaseUrl}/places`, {
+        params: {
+          q: searchQuery,
+        },
+      });
+      setLats(response.data.data.lat);
+      setLons(response.data.data.lon);
+      setLocations(response.data.data.display_name);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to fetch results');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   const debouncedSearch = useCallback(
     debounce((searchQuery: string) => {
       search(searchQuery);
@@ -446,8 +428,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   };
 
   let iframeUrl = '';
-  if(lats && lons) {
-    iframeUrl = `https://www.google.com/maps?q=${lats},${lons}&z=13&output=embed`
+  if (lats && lons) {
+    iframeUrl = `https://www.google.com/maps?q=${lats},${lons}&z=13&output=embed`;
   }
 
   const [selected, setSelected] = useState(false);
@@ -587,7 +569,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <X size={20} className="text-gray-700" />
                   </button>
 
-
                   {lats && lons && (
                     <div>
                       <iframe
@@ -601,7 +582,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                       />
                     </div>
                   )}
-
                 </div>
               )}
             </div>
@@ -647,7 +627,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 ))}
               </div>
             )}
-
 
             <div className="p-4">
               {status === 'photoStories' && (
@@ -806,7 +785,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   id="imageUpload"
                   disabled={isImageDisabled}
                   onChange={handleImageChange}
-                  ref={fileInputRef}
+                  // ref={fileInputRef}
                 />
                 <input
                   type="file"
@@ -816,18 +795,8 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   id="videoUpload"
                   disabled={isVideoDisabled}
                   onChange={handleVideoChange}
-                  ref={fileInputRef}
+                  // ref={fileInputRef}
                 />
-                {/*<input*/}
-                {/*  type="file"*/}
-                {/*  accept="image/*,video/*"*/}
-                {/*  multiple*/}
-                {/*  className="hidden"*/}
-                {/*  id="storyUpload"*/}
-                {/*  disabled={isVideoDisabled}*/}
-                {/*  onChange={handleStoryChange}*/}
-                {/*  ref={fileInputRef}*/}
-                {/*/>*/}
                 <input
                   ref={storyInputRef}
                   id="storyInput"
@@ -836,7 +805,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   onChange={handleStoryChange}
                   className="hidden"
                 />
-
 
                 <label
                   htmlFor="imageUpload"
@@ -881,10 +849,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <div className="bg-white rounded-lg w-full max-w-md mx-4 p-4">
                       {/* Header */}
                       <div className="flex justify-between items-center mb-4">
-                        <button
-                          onClick={closeModal}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
+                        <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
                           <svg
                             className="w-6 h-6"
                             fill="none"
@@ -900,11 +865,10 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                             />
                           </svg>
                         </button>
-                        <h2 className="text-lg font-semibold text-center flex-1">Tìm kiếm vị trí</h2>
-                        <button
-                          onClick={closeModal}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
+                        <h2 className="text-lg font-semibold text-center flex-1">
+                          Tìm kiếm vị trí
+                        </h2>
+                        <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
                           <svg
                             className="w-6 h-6"
                             fill="none"
@@ -954,12 +918,16 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                       <div className="max-h-64 overflow-y-auto">
                         <div>
                           {location ? (
-                            <div onClick={()=> {
-                              search(`${location?.displayName}`)
-                              closeModal();
-                              setSelected(true);
-                              setShowMap(true);
-                            }}>{location.displayName}</div>
+                            <div
+                              onClick={() => {
+                                search(`${location?.displayName}`);
+                                closeModal();
+                                setSelected(true);
+                                setShowMap(true);
+                              }}
+                            >
+                              {location.displayName}
+                            </div>
                           ) : (
                             <p>Đang tải vị trí...</p>
                           )}
@@ -1000,7 +968,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                               <p className="font-medium">{locations}</p>
                             </div>
                           </div>
-
                         ) : (
                           // <p className="text-gray-500 text-center">Không tìm thấy vị trí</p>
                           <p></p>
@@ -1018,7 +985,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 {/*  <Users className="w-5 h-5" />*/}
                 {/*  <span className="text-sm">Cảm xúc</span>*/}
                 {/*</button>*/}
-
               </div>
             </div>
           </div>
