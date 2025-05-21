@@ -70,6 +70,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [notifyAdmin, setNotifyAdmin] = useState(false);
   const [email, setEmail] = useState('akamedia@gmail.com');
   const [volume, setVolume] = useState(90);
+  const [threshold, setThreshold] = useState(90);
 
   const defaultPrompt =
     'Bạn là AI kiểm duyệt nội dung cho mạng xã hội. \n' +
@@ -125,12 +126,9 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   // }, [autoHideEnabled, autoCorrectEnabled, confidenceThreshold]);
 
   useEffect(() => {
-    if (!selectedPage) return;
-    setAutoHideEnabled(false);
-    setAutoCorrectEnabled(false);
-    setConfidenceThreshold(90);
-    setPrompt(defaultPrompt);
-    loadPageConfig(selectedPage);
+    if (selectedPage) {
+      loadPageConfig(selectedPage);
+    }
   }, [selectedPage]);
 
   const fetchPages = async () => {
@@ -221,6 +219,25 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const buildModerationConfigPayload = () => {
+    const userId = JSON.parse(localStorage.getItem('user') || '{}')?.user_id;
+    const page = pages.find((p) => p.id === selectedPage);
+
+    return {
+      facebook_fanpage_id: page?.facebook_fanpage_id,
+      user_id: userId,
+      name: page?.name || 'Tên trang chưa rõ',
+      description: 'Cấu hình kiểm duyệt nội dung',
+      auto_moderation: autoHideEnabled,
+      hide_post_violations: hidePost,
+      edit_minor_content: editContent,
+      notify_admin: notifyAdmin,
+      admin_email: email,
+      threshold: 90,
+      prompt,
+    };
+  };
+
   const togglePageMonitoring = async (pageId: string) => {
     const targetPage = pages.find((page) => page.id === pageId);
     if (!targetPage) return;
@@ -242,17 +259,23 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
 
   const loadPageConfig = async (pageId: string) => {
     try {
-      const config = await getPageConfig(pageId);
+      const page = pages.find((p) => p.id === pageId);
+      if (!page) return;
+      const config = await getPageConfig(page.facebook_fanpage_id);
+
       if (config) {
-        setAutoHideEnabled(config.autoHide ?? false);
-        setAutoCorrectEnabled(config.autoCorrect ?? false);
-        setConfidenceThreshold(config.confidenceThreshold ?? 90);
+        setAutoHideEnabled(config.auto_moderation ?? false);
+        setHidePost(config.hide_post_violations ?? false);
+        setEditContent(config.edit_minor_content ?? false);
+        setNotifyAdmin(config.notify_admin ?? false);
+        setEmail(config.admin_email || '');
         setPrompt(config.prompt || defaultPrompt);
-        setHidePost(config.hidePost ?? false);
-        setEditContent(config.editContent ?? false);
-        setNotifyAdmin(config.notifyAdmin ?? false);
-        setEmail(config.email || '');
-        setVolume(config.volume ?? 90);
+        setVolume(config.threshold ?? 90);
+      } else {
+        setAutoHideEnabled(false);
+        setAutoCorrectEnabled(false);
+        setConfidenceThreshold(90);
+        setPrompt(defaultPrompt);
       }
     } catch (err) {
       console.error('Error loading page config:', err);
@@ -261,37 +284,32 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
 
   const savePageConfig = async () => {
     if (!selectedPage) return;
+
     try {
       setSavingConfig(true);
-      await updatePageConfig(selectedPage, {
-        autoHide: autoHideEnabled,
-        autoCorrect: autoCorrectEnabled,
-        confidenceThreshold,
-        prompt,
-        hidePost,
-        editContent,
-        notifyAdmin,
-        email,
-        volume,
-      });
+      const config = buildModerationConfigPayload();
+      await updatePageConfig(config);
+      alert('Cấu hình đã được lưu thành công!');
     } catch (err) {
-      console.error('Error saving page config:', err);
+      console.error('Lỗi khi lưu cấu hình:', err);
+      alert('Không thể lưu cấu hình.');
     } finally {
       setSavingConfig(false);
     }
   };
 
   const toggleAutoHide = async () => {
-    setLoadingAutoHide(true);
-    try {
-      setAutoHideEnabled((prev) => !prev);
-      await savePageConfig();
-    } catch (err) {
-      console.error(err);
-      setAutoHideEnabled((prev) => !prev);
-    } finally {
-      setLoadingAutoHide(false);
-    }
+    // setLoadingAutoHide(true);
+    // try {
+    //   setAutoHideEnabled((prev) => !prev);
+    //   await savePageConfig();
+    // } catch (err) {
+    //   console.error(err);
+    //   setAutoHideEnabled((prev) => !prev);
+    // } finally {
+    //   setLoadingAutoHide(false);
+    // }
+    setAutoHideEnabled((prev) => !prev);
   };
 
   const toggleAutoCorrect = async () => {
@@ -550,9 +568,14 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                             )}
                           </div>
                         </div>
-                        <div className="flex-1 text-base text-gray-800 line-clamp-3 mb-2 flex items-center justify-center text-center">
-                          {post.message}
+                        <div className="flex-1 flex items-center justify-center text-base text-gray-800 mb-2 text-center px-2">
+                          <span>
+                            {post.message.length > 90
+                              ? `${post.message.slice(0, 90)}...`
+                              : post.message}
+                          </span>
                         </div>
+
                         <div className="flex justify-between items-center mt-auto">
                           <a
                             href={`https://facebook.com/${post.post_id}`}

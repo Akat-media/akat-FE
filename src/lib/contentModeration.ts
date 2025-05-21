@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getAutomationConfig, updateAutomationConfig } from './automation';
 import { BaseUrl } from '../constants';
+import axios from 'axios';
 
 export interface ModerationPrompt {
   id: string;
@@ -131,15 +132,15 @@ export async function getFacebookPages(
 }
 
 export interface AutoEngineConfig {
-  autoHide: boolean;
-  autoCorrect: boolean;
-  confidenceThreshold: number;
+  auto_moderation: boolean;
+  auto_correct: boolean;
+  confidence_threshold: number;
   prompt: string;
-  hidePost: boolean;
-  editContent: boolean;
-  notifyAdmin: boolean;
-  email: string;
-  volume: number;
+  hide_post_violations: boolean;
+  edit_minor_content: boolean;
+  notify_admin: boolean;
+  admin_email: string;
+  threshold: number;
 }
 
 // export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
@@ -152,11 +153,14 @@ export interface AutoEngineConfig {
 //   }
 // }
 
-export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | null> {
+export async function getPageConfig(facebookFanpageId: string): Promise<AutoEngineConfig | null> {
   try {
-    const response = await fetch(`${BaseUrl}/config-moderation?facebook_fanpage_id=${pageId}`);
-    if (!response.ok) throw new Error('Failed to fetch config');
-    return await response.json();
+    const response = await axios.get(`${BaseUrl}/config-moderation`, {
+      params: {
+        facebook_fanpage_id: facebookFanpageId,
+      },
+    });
+    return response.data?.data || null;
   } catch (error) {
     console.error('Error getting page config:', error);
     return null;
@@ -177,17 +181,12 @@ export async function getPageConfig(pageId: string): Promise<AutoEngineConfig | 
 //   }
 // }
 
-export async function updatePageConfig(pageId: string, config: AutoEngineConfig): Promise<void> {
+export async function updatePageConfig(config: any): Promise<void> {
   try {
-    await fetch('${BaseUrl}/config-moderation', {
-      method: 'POST',
+    await axios.post(`${BaseUrl}/config-moderation`, config, {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        facebook_fanpage_id: pageId,
-        ...config,
-      }),
     });
   } catch (error) {
     console.error('Error updating page config:', error);
