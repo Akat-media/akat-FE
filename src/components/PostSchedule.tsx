@@ -31,6 +31,7 @@ import axios from 'axios';
 import { BaseUrl } from '../constants';
 import { toast } from 'react-toastify';
 import ListPostSchedule from './content-management/post-managenment/ListPostSchedule.tsx';
+import { now } from 'lodash';
 
 interface Page {
   id: string;
@@ -74,6 +75,13 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
   const [videos, setVideos] = useState<string[]>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
+  const [status, setStatus] = useState('');
+  const [photoStories, setPhotoStories] = useState<string[]>([]);
+  const [videoStories, setVideoStories] = useState<string[]>([]);
+  const [fileImages, setFileImages] = useState<File[]>([]);
+  const storyInputRef = useRef<HTMLInputElement>(null);
+  const [contentError, setContentError] = useState(false);
+  const [fileVideosStory, setFileVideosStory] = useState<any[]>([]);
 
   // thêm state để lưu trữ ngày nào đang mở rộng
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
@@ -386,6 +394,75 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [postTime, setPostTime] = useState('');
   const [content, setContent] = useState('');
 
+  const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Chỉ cho phép upload 1 file
+    if (files.length > 1) {
+      toast.error('Chỉ được phép upload một ảnh hoặc video duy nhất!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      e.target.value = '';
+      return;
+    }
+
+    const file = files[0];
+    const MAX_SIZE_MB = 100;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.error(`File "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      e.target.value = '';
+      return;
+    }
+
+    const fileURL = URL.createObjectURL(file);
+
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const isImage =
+      file.type.startsWith('image/') ||
+      ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+    const isVideo =
+      file.type.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(fileExtension || '');
+
+    if (isImage) {
+      setStatus('photoStories');
+      setPhotoStories([fileURL]);
+      setFileImages([file]);
+    } else if (isVideo) {
+      setStatus('videoStories');
+      setVideoStories([fileURL]);
+      setFileVideos([file]);
+    } else {
+      toast.error('Vui lòng chọn file ảnh hoặc video hợp lệ!', {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
+      e.target.value = '';
+      return;
+    }
+  };
+
   const handleImageChange = (e: any) => {
     setIsImageDisabled(false);
     setIsVideoDisabled(true);
@@ -397,15 +474,21 @@ function PostSchedule({ page }: PostScheduleProps) {
       const files = Array.from(e.target.files);
       setFiles((prev: any) => [...prev, ...files]);
     }
+
+    console.log("images",images)
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setFiles((prev: any) => prev.filter((_: any, i: number) => i !== indexToRemove));
+    setPhotoStories([]);
+    setFileImages([]);
     setIsVideoDisabled(false);
+    setContentError(false);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = "";
+    // }
   };
 
   const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -435,18 +518,15 @@ function PostSchedule({ page }: PostScheduleProps) {
     const file = files[0];
 
     if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`,
-        {
-          position: 'top-right',
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: false,
-          draggable: false,
-          progress: undefined,
-        }
-      );
+      toast.error(`Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
+        position: 'top-right',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+      });
       event.target.value = ''; // Reset input
       return;
     }
@@ -455,16 +535,19 @@ function PostSchedule({ page }: PostScheduleProps) {
     const newVideo = URL.createObjectURL(file);
     setVideos([newVideo]);
     setFileVideos([file]);
+    console.log("videos",videos)
+
   };
 
   const handleRemoveVideo = (index: number) => {
+    setVideoStories((prev) => prev.filter((_, i) => i !== index));
     setVideos((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setContentError(false);
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = "";
+    // }
   };
 
   function createFormData(data: any) {
@@ -483,9 +566,13 @@ function PostSchedule({ page }: PostScheduleProps) {
   }
   const handleCreateAndSchedulePost = async () => {
     try {
+      const now = new Date();
       const combinedDateTime = new Date(`${postDate}T${postTime}:00`);
-      console.log('combinedDateTime', combinedDateTime.toISOString());
-      const body: any = createFormData({
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      // console.log('combinedDateTime', combinedDateTime.toISOString());
+      console.log("files",files);
+
+      const payload: any = {
         files,
         content: content,
         likes: '0',
@@ -494,13 +581,34 @@ function PostSchedule({ page }: PostScheduleProps) {
         status: 'pending',
         access_token: selectedPage?.access_token[0] || '',
         posted_at: combinedDateTime.toISOString(),
-        scheduledTime: combinedDateTime.toISOString(),
+        scheduledTime: yesterday.toISOString(),
         facebook_fanpage_id: selectedPage?.facebook_fanpage_id,
         page_name: selectedPage?.name,
-      });
-      for (const [key, value] of body.entries()) {
-        console.log(`${key}: ${value}`);
+      };
+      // console.log("video lenth",videos.length)
+      // return
+      if (images.length > 0) {
+        payload['type'] = '';
+      } else if (videos.length > 0) {
+        payload['type'] = 'video';
+        payload['files'] = fileVideos;
+      } else if (photoStories.length > 0) {
+        payload['type'] = 'photo_stories';
+        payload['files'] = fileImages;
+      } else if (videoStories.length > 0) {
+        payload['type'] = 'video_stories';
+        payload['files'] = fileVideos;
       }
+      console.log("payload",payload);
+      // return
+
+      if((photoStories.length > 0 && content.length <= 0) || (videoStories.length > 0 && content.length <= 0)) {
+        setContentError(true);
+        return;
+      }
+
+      const body: any = createFormData(payload);
+
       const res = await axios.post(`${BaseUrl}/facebook-schedule`, body, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -806,6 +914,10 @@ function PostSchedule({ page }: PostScheduleProps) {
                     placeholder="Bạn đang nghĩ gì?"
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
+                  {contentError && (
+                    <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
+                  )}
+
                   {images.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-3">
                       {images.map((img: any, index: any) => (
@@ -841,6 +953,46 @@ function PostSchedule({ page }: PostScheduleProps) {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="p-4">
+                  {status === 'photoStories' && (
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {photoStories.map((img: any, index: any) => (
+                        <div key={index} className="relative w-32 h-32 image-exist">
+                          <img
+                            src={img}
+                            alt={`upload-${index}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {status === 'videoStories' && (
+                    <div className="mt-4 flex flex-wrap gap-3 video">
+                      {videoStories.map((vid: string, index: number) => (
+                        <div key={index} className="relative w-32 h-32 video-exist">
+                          <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            onClick={() => handleRemoveVideo(index)}
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/*<ToastContainer />*/}
                 </div>
 
                 {/* AI suggestion */}
@@ -957,7 +1109,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                       id="imageUpload"
                       onChange={handleImageChange}
                       disabled={isImageDisabled}
-                      ref={fileInputRef}
+                      // ref={fileInputRef}
                     />
                     <input
                       type="file"
@@ -967,8 +1119,17 @@ function PostSchedule({ page }: PostScheduleProps) {
                       id="videoUpload"
                       disabled={isVideoDisabled}
                       onChange={handleVideoChange}
-                      ref={fileInputRef}
+                      // ref={fileInputRef}
                     />
+                    <input
+                      ref={storyInputRef}
+                      id="storyInput"
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={handleStoryChange}
+                      className="hidden"
+                    />
+
                     <label
                       htmlFor="imageUpload"
                       className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-green-600 transition-colors cursor-pointer"
@@ -976,6 +1137,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                       <Image className="w-5 h-5" />
                       <span className="text-sm">Ảnh</span>
                     </label>
+
                     <label
                       htmlFor="videoUpload"
                       className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors cursor-pointer"
@@ -983,14 +1145,23 @@ function PostSchedule({ page }: PostScheduleProps) {
                       <Video className="w-5 h-5" />
                       <span className="text-sm">Video</span>
                     </label>
+
+                    <label
+                      htmlFor="storyInput"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-5 h-5" />
+                      <span className="text-sm">Story</span>
+                    </label>
+
                     {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-blue-600 transition-colors">*/}
                     {/*  <Video className="w-5 h-5" />*/}
                     {/*  <span className="text-sm">Video</span>*/}
                     {/*</button>*/}
-                    <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">
-                      <Camera className="w-5 h-5" />
-                      <span className="text-sm">Story</span>
-                    </button>
+                    {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-purple-600 transition-colors">*/}
+                    {/*  <Camera className="w-5 h-5" />*/}
+                    {/*  <span className="text-sm">Story</span>*/}
+                    {/*</button>*/}
                     {/*<button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-lg text-orange-600 transition-colors">*/}
                     {/*  <MapPin className="w-5 h-5" />*/}
                     {/*  <span className="text-sm">Check in</span>*/}
