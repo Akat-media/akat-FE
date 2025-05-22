@@ -47,6 +47,16 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
 
   const generateSuggestions = async () => {
     try {
+      if(content.length <= 0) {
+        setContentError(true);
+        console.log("content error",contentError)
+        return;
+      } else {
+        setContentError(false);
+        console.log("content error",contentError)
+      }
+
+
       setLoading(false);
       setSuggestionHistory([]);
       setGeneratingSuggestions(true);
@@ -87,8 +97,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
   const [contentError, setContentError] = useState(false);
+  const [isStoryDisabled, setIsStoryDisabled] = useState(false);
 
   const handleStoryChange = (e: any) => {
+    setIsImageDisabled(true);
+    setIsVideoDisabled(true);
     const files = e.target.files;
     if (!files || files.length === 0) return;
     // Chỉ cho phép upload 1 file
@@ -158,6 +171,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const handleVideoChange = (event: any) => {
     setIsImageDisabled(true);
     setIsVideoDisabled(false);
+    setIsStoryDisabled(true);
     const files = event.target.files;
     if (!files || files.length === 0) return;
     if (files.length > 1) {
@@ -202,14 +216,23 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
-    // if (fileInputRef.current) {
-    //   fileInputRef.current.value = '';
-    // }
+    setIsStoryDisabled(false)
+  };
+
+  const handleRemoveVideoStory = (index: number) => {
+    setVideoStories((prev) => prev.filter((_, i) => i !== index));
+    setFileVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setIsImageDisabled(false);
+    setContentError(false);
+    // setIsStoryDisabled(false);
+    setIsVideoDisabled(false);
   };
 
   const handleImageChange = (e: any) => {
     setIsImageDisabled(false);
     setIsVideoDisabled(true);
+    setIsStoryDisabled(true);
 
     const files = Array.from(e.target.files);
     const newImages = files.map((file: any) => URL.createObjectURL(file));
@@ -238,7 +261,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     try {
       setIsLoading(true);
       const now = new Date();
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      // const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const payload: any = {
         files: [...files, ...fileVideos],
         content: content,
@@ -248,7 +271,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         status: 'pending',
         access_token: page?.access_token[0] || '',
         posted_at: now.toISOString(),
-        scheduledTime: yesterday.toISOString(),
+        scheduledTime: now.toISOString(),
         facebook_fanpage_id: page?.facebook_fanpage_id,
         page_name: page?.name,
       };
@@ -273,6 +296,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         setContentError(true);
         return;
       }
+
+      if (content.length <= 0) {
+        setContentError(true);
+        return;
+      } else {
+        setContentError(false);
+      }
+
 
       const body: any = createFormData(payload);
       // return;
@@ -337,10 +368,17 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setFileImages([]);
     setIsVideoDisabled(false);
     setContentError(false);
+    setIsStoryDisabled(false);
+  };
 
-    // if (fileInputRef.current) {
-    //   fileInputRef.current.value = '';
-    // }
+  const handleRemoveImageStory = (indexToRemove: number) => {
+    setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setFiles((prev: any) => prev.filter((_: any, i: number) => i !== indexToRemove));
+    setPhotoStories([]);
+    setFileImages([]);
+    setContentError(false);
+    setIsImageDisabled(false);
+    setIsVideoDisabled(false);
   };
 
   const handleChange = (e: any) => {
@@ -564,9 +602,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 placeholder="Bạn đang nghĩ gì?"
                 className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-gray-900 placeholder-gray-500 text-lg"
               />
-              {contentError && (
-                <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
-              )}
+
 
               {/*map*/}
               {selected && showMap && (
@@ -594,6 +630,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 </div>
               )}
             </div>
+            {contentError && !content && (
+              <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
+            )}
 
             {images.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-3">
@@ -648,7 +687,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                         className="w-full h-full object-cover rounded-lg"
                       />
                       <button
-                        onClick={() => handleRemoveImage(index)}
+                        onClick={() => handleRemoveImageStory(index)}
                         className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
                       >
                         ✕
@@ -664,7 +703,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                     <div key={index} className="relative w-32 h-32 video-exist">
                       <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
                       <button
-                        onClick={() => handleRemoveVideo(index)}
+                        onClick={() => handleRemoveVideoStory(index)}
                         className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
                       >
                         ✕
@@ -810,6 +849,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   type="file"
                   accept="image/*,video/*"
                   onChange={handleStoryChange}
+                  disabled={isStoryDisabled}
                   className="hidden"
                 />
 
