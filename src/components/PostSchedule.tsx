@@ -73,7 +73,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
-  const [videos, setVideos] = useState<any>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
   const [status, setStatus] = useState('');
   const [photoStories, setPhotoStories] = useState<string[]>([]);
@@ -556,7 +556,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideo = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
@@ -565,7 +565,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideoStory = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setIsVideoDisabled(false);
@@ -908,12 +908,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setSuggestions([]);
                     setAsk('');
                     setContentError(false);
-                    setImages('');
-                    setVideos('');
-                    setStatus('');
-                    setIsImageDisabled(false);
-                    setIsVideoDisabled(false);
-                    setIsStoryDisabled(false);
+                    // setImages('');
+                    // setVideos([]);
+                    // setStatus('');
+                    // setIsImageDisabled(false);
+                    // setIsVideoDisabled(false);
+                    // setIsStoryDisabled(false);
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -1268,12 +1268,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                   setVisible(false);
                   setHasSubmitted(false);
                   setContentError(false);
-                  setImages('');
-                  setVideos('');
-                  setStatus('');
-                  setIsImageDisabled(false);
-                  setIsVideoDisabled(false);
-                  setIsStoryDisabled(false);
+                  // setImages('');
+                  // setVideos([]);
+                  // setStatus('');
+                  // setIsImageDisabled(false);
+                  // setIsVideoDisabled(false);
+                  // setIsStoryDisabled(false);
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
