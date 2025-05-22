@@ -101,7 +101,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  console.log('dataPostDraft', dataPostDraft);
+  // console.log('dataPostDraft', dataPostDraft);
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -908,12 +908,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setSuggestions([]);
                     setAsk('');
                     setContentError(false);
-                    // setImages('');
-                    // setVideos([]);
-                    // setStatus('');
-                    // setIsImageDisabled(false);
-                    // setIsVideoDisabled(false);
-                    // setIsStoryDisabled(false);
+                    images.length = 0;
+                    videos.length = 0;
+                    setStatus('');
+                    setIsImageDisabled(false);
+                    setIsVideoDisabled(false);
+                    setIsStoryDisabled(false);
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -1268,12 +1268,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                   setVisible(false);
                   setHasSubmitted(false);
                   setContentError(false);
-                  // setImages('');
-                  // setVideos([]);
-                  // setStatus('');
-                  // setIsImageDisabled(false);
-                  // setIsVideoDisabled(false);
-                  // setIsStoryDisabled(false);
+                  images.length = 0;
+                  videos.length = 0;
+                  setStatus('');
+                  setIsImageDisabled(false);
+                  setIsVideoDisabled(false);
+                  setIsStoryDisabled(false);
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
