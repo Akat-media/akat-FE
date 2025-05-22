@@ -394,7 +394,10 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [postTime, setPostTime] = useState('');
   const [content, setContent] = useState('');
 
-  const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStoryChange = (e: any) => {
+    setIsImageDisabled(true)
+    setIsVideoDisabled(true)
+
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -461,6 +464,7 @@ function PostSchedule({ page }: PostScheduleProps) {
       e.target.value = '';
       return;
     }
+    e.target.value = null;
   };
 
   const handleImageChange = (e: any) => {
@@ -474,7 +478,7 @@ function PostSchedule({ page }: PostScheduleProps) {
       const files = Array.from(e.target.files);
       setFiles((prev: any) => [...prev, ...files]);
     }
-
+    e.target.value = null;
     console.log("images",images)
   };
 
@@ -485,13 +489,19 @@ function PostSchedule({ page }: PostScheduleProps) {
     setFileImages([]);
     setIsVideoDisabled(false);
     setContentError(false);
-
-    // if (fileInputRef.current) {
-    //   fileInputRef.current.value = "";
-    // }
   };
 
-  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRemoveImageStory = (indexToRemove: number) => {
+    setImages((prevImages: string[]) => prevImages.filter((_, index) => index !== indexToRemove));
+    setFiles((prev: any) => prev.filter((_: any, i: number) => i !== indexToRemove));
+    setPhotoStories([]);
+    setFileImages([]);
+    setIsVideoDisabled(false);
+    setIsImageDisabled(false);
+    setContentError(false);
+  };
+
+  const handleVideoChange = (event:any) => {
     setIsImageDisabled(true);
     setIsVideoDisabled(false);
 
@@ -535,6 +545,7 @@ function PostSchedule({ page }: PostScheduleProps) {
     const newVideo = URL.createObjectURL(file);
     setVideos([newVideo]);
     setFileVideos([file]);
+    event.target.value = null;
     console.log("videos",videos)
 
   };
@@ -545,10 +556,17 @@ function PostSchedule({ page }: PostScheduleProps) {
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
-    // if (fileInputRef.current) {
-    //   fileInputRef.current.value = "";
-    // }
   };
+
+  const handleRemoveVideoStory = (index: number) => {
+    setVideoStories((prev) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setFileVideos((prev) => prev.filter((_, i) => i !== index));
+    setIsImageDisabled(false);
+    setIsVideoDisabled(false)
+    setContentError(false);
+  };
+
 
   function createFormData(data: any) {
     const formData = new FormData();
@@ -568,7 +586,7 @@ function PostSchedule({ page }: PostScheduleProps) {
     try {
       const now = new Date();
       const combinedDateTime = new Date(`${postDate}T${postTime}:00`);
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      // const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       // console.log('combinedDateTime', combinedDateTime.toISOString());
       console.log("files",files);
 
@@ -581,7 +599,7 @@ function PostSchedule({ page }: PostScheduleProps) {
         status: 'pending',
         access_token: selectedPage?.access_token[0] || '',
         posted_at: combinedDateTime.toISOString(),
-        scheduledTime: yesterday.toISOString(),
+        scheduledTime: combinedDateTime.toISOString(),
         facebook_fanpage_id: selectedPage?.facebook_fanpage_id,
         page_name: selectedPage?.name,
       };
@@ -605,6 +623,13 @@ function PostSchedule({ page }: PostScheduleProps) {
       if((photoStories.length > 0 && content.length <= 0) || (videoStories.length > 0 && content.length <= 0)) {
         setContentError(true);
         return;
+      }
+
+      if (content.length <= 0) {
+        setContentError(true);
+        return;
+      } else {
+        setContentError(false);
       }
 
       const body: any = createFormData(payload);
@@ -655,6 +680,15 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const generateSuggestions = async () => {
     try {
+      if(content.length <= 0) {
+        setContentError(true);
+        console.log("content error",contentError)
+        return;
+      } else {
+        setContentError(false);
+        console.log("content error",contentError)
+      }
+
       setLoading(false);
       setSuggestionHistory([]);
       setGeneratingSuggestions(true);
@@ -914,46 +948,48 @@ function PostSchedule({ page }: PostScheduleProps) {
                     placeholder="Bạn đang nghĩ gì?"
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
-                  {contentError && (
-                    <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
-                  )}
 
-                  {images.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      {images.map((img: any, index: any) => (
-                        <div key={index} className="relative w-32 h-32">
-                          <img
-                            src={img}
-                            alt={`upload-${index}`}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                          <button
-                            onClick={() => handleRemoveImage(index)}
-                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {videos.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      {videos.map((vid: string, index: number) => (
-                        <div key={index} className="relative w-32 h-32 video-exist">
-                          <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
-                          <button
-                            onClick={() => handleRemoveVideo(index)}
-                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
+
+                {contentError && !content && (
+                  <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
+                )}
+
+                {images.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {images.map((img: any, index: any) => (
+                      <div key={index} className="relative w-32 h-32">
+                        <img
+                          src={img}
+                          alt={`upload-${index}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {videos.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {videos.map((vid: string, index: number) => (
+                      <div key={index} className="relative w-32 h-32 video-exist">
+                        <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                        <button
+                          onClick={() => handleRemoveVideo(index)}
+                          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="p-4">
                   {status === 'photoStories' && (
@@ -966,7 +1002,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                             className="w-full h-full object-cover rounded-lg"
                           />
                           <button
-                            onClick={() => handleRemoveImage(index)}
+                            onClick={() => handleRemoveImageStory(index)}
                             className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
                           >
                             ✕
@@ -982,7 +1018,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                         <div key={index} className="relative w-32 h-32 video-exist">
                           <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
                           <button
-                            onClick={() => handleRemoveVideo(index)}
+                            onClick={() => handleRemoveVideoStory(index)}
                             className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
                           >
                             ✕
@@ -994,6 +1030,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
                   {/*<ToastContainer />*/}
                 </div>
+
 
                 {/* AI suggestion */}
                 {!showAiSuggestions && !visible ? (
