@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react';
 import socket from '../lib/socket';
 import axios from 'axios';
 import { BaseUrl } from '../constants';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Notification {
   id: string;
@@ -13,8 +14,11 @@ interface Notification {
 }
 
 const NotificationCenter = () => {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+
+  const userId = user?.user_id;
 
   const toggleNotificationCenter = () => {
     setIsOpen(!isOpen);
@@ -22,7 +26,8 @@ const NotificationCenter = () => {
       setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
     }
   };
-  const hanleCallNoti = async () => {
+
+  const handleCallNoti = async (userId: string) => {
     try {
       const postResponse = await axios.get(`${BaseUrl}/noti?userId=${userId}`);
       const data = postResponse.data.data.data.map((item: any) => ({
@@ -38,20 +43,22 @@ const NotificationCenter = () => {
       console.error('Error fetching notifications:', error);
     }
   };
+
   useEffect(() => {
-    hanleCallNoti();
-  }, []);
-  const user = localStorage.getItem('user');
-  const userId = JSON.parse(user || '{}')?.user_id;
+    if (userId) {
+      handleCallNoti(userId);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) return;
+
     socket.on('connect', () => {
-      console.log('✅ Connected to socket (on connect event):', socket.id);
+      console.log('Connected to socket:', socket.id);
       socket.emit('joinRoom', { userId });
     });
 
     socket.on('fb-sync', (data) => {
-      console.log('📥 FB Sync Event:', data);
       const newNoti = {
         id: data._id,
         title: data.title,
@@ -67,7 +74,9 @@ const NotificationCenter = () => {
       socket.off('fb-sync');
     };
   }, [userId]);
-  const hasUnreadNotifications = notifications.some((notification) => !notification.isRead);
+
+  const hasUnreadNotifications = notifications.some((n) => !n.isRead);
+  if (!userId) return null;
 
   return (
     <div className="relative">
