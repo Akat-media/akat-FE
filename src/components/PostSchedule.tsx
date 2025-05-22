@@ -83,6 +83,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [contentError, setContentError] = useState(false);
   const [fileVideosStory, setFileVideosStory] = useState<any[]>([]);
   const [isStoryDisabled, setIsStoryDisabled] = useState(false);
+  const isSubmitting = useRef(false);
 
   // thêm state để lưu trữ ngày nào đang mở rộng
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
@@ -396,8 +397,8 @@ function PostSchedule({ page }: PostScheduleProps) {
   const [content, setContent] = useState('');
 
   const handleStoryChange = (e: any) => {
-    setIsImageDisabled(true)
-    setIsVideoDisabled(true)
+    setIsImageDisabled(true);
+    setIsVideoDisabled(true);
 
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -481,7 +482,7 @@ function PostSchedule({ page }: PostScheduleProps) {
       setFiles((prev: any) => [...prev, ...files]);
     }
     e.target.value = null;
-    console.log("images",images)
+    console.log('images', images);
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
@@ -504,7 +505,7 @@ function PostSchedule({ page }: PostScheduleProps) {
     setContentError(false);
   };
 
-  const handleVideoChange = (event:any) => {
+  const handleVideoChange = (event: any) => {
     setIsImageDisabled(true);
     setIsVideoDisabled(false);
     setIsStoryDisabled(true);
@@ -550,13 +551,12 @@ function PostSchedule({ page }: PostScheduleProps) {
     setVideos([newVideo]);
     setFileVideos([file]);
     event.target.value = null;
-    console.log("videos",videos)
-
+    console.log('videos', videos);
   };
 
   const handleRemoveVideo = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev:string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
@@ -565,13 +565,12 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideoStory = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev:string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
-    setIsVideoDisabled(false)
+    setIsVideoDisabled(false);
     setContentError(false);
   };
-
 
   function createFormData(data: any) {
     const formData = new FormData();
@@ -587,17 +586,20 @@ function PostSchedule({ page }: PostScheduleProps) {
     }
     return formData;
   }
+
   const handleCreateAndSchedulePost = async () => {
+    if (isSubmitting.current) return;
+
+    isSubmitting.current = true;
+    setLoading(true);
+
     try {
       const now = new Date();
       const combinedDateTime = new Date(`${postDate}T${postTime}:00`);
-      // const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      // console.log('combinedDateTime', combinedDateTime.toISOString());
-      console.log("files",files);
 
       const payload: any = {
         files,
-        content: content,
+        content,
         likes: '0',
         comments: '0',
         shares: '0',
@@ -608,8 +610,7 @@ function PostSchedule({ page }: PostScheduleProps) {
         facebook_fanpage_id: selectedPage?.facebook_fanpage_id,
         page_name: selectedPage?.name,
       };
-      // console.log("video lenth",videos.length)
-      // return
+
       if (images.length > 0) {
         payload['type'] = '';
       } else if (videos.length > 0) {
@@ -622,53 +623,44 @@ function PostSchedule({ page }: PostScheduleProps) {
         payload['type'] = 'video_stories';
         payload['files'] = fileVideos;
       }
-      console.log("payload",payload);
-      // return
 
-      if((photoStories.length > 0 && content.length <= 0) || (videoStories.length > 0 && content.length <= 0)) {
+      if ((photoStories.length > 0 || videoStories.length > 0) && content.length <= 0) {
         setContentError(true);
+        setLoading(false);
         return;
       }
 
       if (content.length <= 0) {
         setContentError(true);
+        setLoading(false);
         return;
-      } else {
-        setContentError(false);
       }
 
-      const body: any = createFormData(payload);
+      setContentError(false);
 
-      const res = await axios.post(`${BaseUrl}/facebook-schedule`, body, {
+      const body = createFormData(payload);
+      await axios.post(`${BaseUrl}/facebook-schedule`, body, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+
       setImages([]);
       setFiles([]);
       setPostDate('');
       setPostTime('');
       setContent('');
       setShowNewPost(false);
-      toast.success('Lên lịch đăng thành công!', {
-        position: 'top-right',
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: false,
-        draggable: false,
-        progress: undefined,
-      });
+
+      toast.success('Lên lịch đăng thành công!', { autoClose: 2000 });
 
       await handleCallApi();
     } catch (error) {
-      setImages([]);
-      setFiles([]);
-      setPostDate('');
-      setPostTime('');
-      setContent('');
-      setShowNewPost(false);
-      console.error('Lỗi khi tải danh sách bài viết:', error);
+      console.error('Lỗi khi lên lịch:', error);
+      toast.error('Lỗi khi lên lịch, vui lòng thử lại');
+    } finally {
+      setLoading(false);
+      isSubmitting.current = false;
     }
   };
 
@@ -685,13 +677,13 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const generateSuggestions = async () => {
     try {
-      if(content.length <= 0) {
+      if (content.length <= 0) {
         setContentError(true);
-        console.log("content error",contentError)
+        console.log('content error', contentError);
         return;
       } else {
         setContentError(false);
-        console.log("content error",contentError)
+        console.log('content error', contentError);
       }
 
       setLoading(false);
@@ -916,9 +908,9 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setSuggestions([]);
                     setAsk('');
                     setContentError(false);
-                    setImages("");
-                    setVideos("");
-                    setStatus("");
+                    setImages('');
+                    setVideos('');
+                    setStatus('');
                     setIsImageDisabled(false);
                     setIsVideoDisabled(false);
                     setIsStoryDisabled(false);
@@ -960,7 +952,6 @@ function PostSchedule({ page }: PostScheduleProps) {
                     placeholder="Bạn đang nghĩ gì?"
                     className="w-full h-full min-h-[150px] bg-transparent border-none focus:outline-none ring-0 resize-none text-gray-900 placeholder-gray-500 text-lg"
                   />
-
                 </div>
 
                 {contentError && !content && (
@@ -991,7 +982,11 @@ function PostSchedule({ page }: PostScheduleProps) {
                   <div className="mt-4 flex flex-wrap gap-3">
                     {videos.map((vid: string, index: number) => (
                       <div key={index} className="relative w-32 h-32 video-exist">
-                        <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                        <video
+                          src={vid}
+                          controls
+                          className="w-full h-full object-cover rounded-lg"
+                        />
                         <button
                           onClick={() => handleRemoveVideo(index)}
                           className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
@@ -1003,46 +998,47 @@ function PostSchedule({ page }: PostScheduleProps) {
                   </div>
                 )}
 
+                {status === 'photoStories' && (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {photoStories.map((img: any, index: any) => (
+                      <div key={index} className="relative w-32 h-32 image-exist">
+                        <img
+                          src={img}
+                          alt={`upload-${index}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => handleRemoveImageStory(index)}
+                          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  {status === 'photoStories' && (
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      {photoStories.map((img: any, index: any) => (
-                        <div key={index} className="relative w-32 h-32 image-exist">
-                          <img
-                            src={img}
-                            alt={`upload-${index}`}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                          <button
-                            onClick={() => handleRemoveImageStory(index)}
-                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                {status === 'videoStories' && (
+                  <div className="mt-4 flex flex-wrap gap-3 video">
+                    {videoStories.map((vid: string, index: number) => (
+                      <div key={index} className="relative w-32 h-32 video-exist">
+                        <video
+                          src={vid}
+                          controls
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => handleRemoveVideoStory(index)}
+                          className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  {status === 'videoStories' && (
-                    <div className="mt-4 flex flex-wrap gap-3 video">
-                      {videoStories.map((vid: string, index: number) => (
-                        <div key={index} className="relative w-32 h-32 video-exist">
-                          <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
-                          <button
-                            onClick={() => handleRemoveVideoStory(index)}
-                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/*<ToastContainer />*/}
-
-
+                {/*<ToastContainer />*/}
 
                 {/* AI suggestion */}
                 {!showAiSuggestions && !visible ? (
@@ -1225,7 +1221,6 @@ function PostSchedule({ page }: PostScheduleProps) {
                     {/*  <Users className="w-5 h-5" />*/}
                     {/*  <span className="text-sm">Cảm xúc</span>*/}
                     {/*</button>*/}
-
                   </div>
                 </div>
 
@@ -1273,13 +1268,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                   setVisible(false);
                   setHasSubmitted(false);
                   setContentError(false);
-                  setImages("");
-                  setVideos("");
-                  setStatus("");
+                  setImages('');
+                  setVideos('');
+                  setStatus('');
                   setIsImageDisabled(false);
                   setIsVideoDisabled(false);
                   setIsStoryDisabled(false);
-
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -1287,9 +1281,19 @@ function PostSchedule({ page }: PostScheduleProps) {
               </button>
               <button
                 onClick={handleCreateAndSchedulePost}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={loading}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center justify-center min-w-[120px] transition-colors ${
+                  loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
+                }`}
               >
-                Lên lịch
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Đang lên lịch...
+                  </>
+                ) : (
+                  'Lên lịch'
+                )}
               </button>
             </div>
           </div>
