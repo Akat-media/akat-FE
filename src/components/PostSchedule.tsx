@@ -73,7 +73,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
-  const [videos, setVideos] = useState<string[]>([]);
+  const [videos, setVideos] = useState<any>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
   const [status, setStatus] = useState('');
   const [photoStories, setPhotoStories] = useState<string[]>([]);
@@ -82,6 +82,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const storyInputRef = useRef<HTMLInputElement>(null);
   const [contentError, setContentError] = useState(false);
   const [fileVideosStory, setFileVideosStory] = useState<any[]>([]);
+  const [isStoryDisabled, setIsStoryDisabled] = useState(false);
 
   // thêm state để lưu trữ ngày nào đang mở rộng
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
@@ -470,6 +471,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const handleImageChange = (e: any) => {
     setIsImageDisabled(false);
     setIsVideoDisabled(true);
+    setIsStoryDisabled(true);
 
     const files = Array.from(e.target.files);
     const newImages = files.map((file: any) => URL.createObjectURL(file));
@@ -489,6 +491,7 @@ function PostSchedule({ page }: PostScheduleProps) {
     setFileImages([]);
     setIsVideoDisabled(false);
     setContentError(false);
+    setIsStoryDisabled(false);
   };
 
   const handleRemoveImageStory = (indexToRemove: number) => {
@@ -504,6 +507,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const handleVideoChange = (event:any) => {
     setIsImageDisabled(true);
     setIsVideoDisabled(false);
+    setIsStoryDisabled(true);
 
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -552,15 +556,16 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideo = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideos((prev:string[]) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
+    setIsStoryDisabled(false);
   };
 
   const handleRemoveVideoStory = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideos((prev:string[]) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setIsVideoDisabled(false)
@@ -911,6 +916,12 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setSuggestions([]);
                     setAsk('');
                     setContentError(false);
+                    setImages("");
+                    setVideos("");
+                    setStatus("");
+                    setIsImageDisabled(false);
+                    setIsVideoDisabled(false);
+                    setIsStoryDisabled(false);
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -992,7 +1003,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                   </div>
                 )}
 
-                <div className="p-4">
+
                   {status === 'photoStories' && (
                     <div className="mt-4 flex flex-wrap gap-3">
                       {photoStories.map((img: any, index: any) => (
@@ -1030,7 +1041,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                   )}
 
                   {/*<ToastContainer />*/}
-                </div>
+
 
 
                 {/* AI suggestion */}
@@ -1165,6 +1176,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                       type="file"
                       accept="image/*,video/*"
                       onChange={handleStoryChange}
+                      disabled={isStoryDisabled}
                       className="hidden"
                     />
 
@@ -1261,6 +1273,13 @@ function PostSchedule({ page }: PostScheduleProps) {
                   setVisible(false);
                   setHasSubmitted(false);
                   setContentError(false);
+                  setImages("");
+                  setVideos("");
+                  setStatus("");
+                  setIsImageDisabled(false);
+                  setIsVideoDisabled(false);
+                  setIsStoryDisabled(false);
+
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
