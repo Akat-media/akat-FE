@@ -116,7 +116,8 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
     '{\n' +
     '  "hypothetical_violation_reason": "string - lý do chi tiết bằng tiếng Việt",\n' +
     '  "severity": "veryhigh" | "high" | "medium" | "low"\n' +
-    '}\n' +
+    '}\n\n' +
+    'Nếu không vi phạm gì thì hypothetical_violation_reason sẽ là null.\n' +
     'Không thêm bất kỳ text, markdown hay giải thích nào khác.';
 
   const [prompt, setPrompt] = useState(defaultPrompt);
