@@ -910,6 +910,7 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setLoading(false);
                     setSuggestions([]);
                     setAsk('');
+                    setContentError(false);
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
