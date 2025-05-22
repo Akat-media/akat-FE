@@ -79,7 +79,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videos, setVideos] = useState<string[]>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [photoStories, setPhotoStories] = useState<string[]>([]);
   const [videoStories, setVideoStories] = useState<string[]>([]);
   const [status, setStatus] = useState('');
@@ -89,10 +88,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
   const [contentError, setContentError] = useState(false);
 
-  const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStoryChange = (e: any) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     // Chỉ cho phép upload 1 file
     if (files.length > 1) {
       toast.error('Chỉ được phép upload một ảnh hoặc video duy nhất!', {
@@ -107,11 +105,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       e.target.value = '';
       return;
     }
-
     const file = files[0];
     const MAX_SIZE_MB = 100;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-
     if (file.size > MAX_SIZE_BYTES) {
       toast.error(`File "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
         position: 'top-right',
@@ -156,15 +152,14 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       e.target.value = '';
       return;
     }
+    e.target.value = null;
   };
 
-  const handleVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoChange = (event: any) => {
     setIsImageDisabled(true);
     setIsVideoDisabled(false);
-
     const files = event.target.files;
     if (!files || files.length === 0) return;
-
     if (files.length > 1) {
       toast.error('Chỉ được phép upload một video duy nhất!', {
         position: 'top-right',
@@ -178,12 +173,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       event.target.value = ''; // Reset input để xóa các file đã chọn
       return;
     }
-
     const MAX_SIZE_MB = 100;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-
     const file = files[0];
-
     if (file.size > MAX_SIZE_BYTES) {
       toast.error(`Video "${file.name}" vượt quá ${MAX_SIZE_MB}MB và đã bị từ chối!`, {
         position: 'top-right',
@@ -197,11 +189,11 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       event.target.value = ''; // Reset input
       return;
     }
-
     // Xóa video cũ (nếu có) và chỉ lưu video mới
     const newVideo = URL.createObjectURL(file);
     setVideos([newVideo]);
     setFileVideos([file]);
+    event.target.value = null;
   };
 
   const handleRemoveVideo = (index: number) => {
@@ -226,6 +218,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
       const files = Array.from(e.target.files);
       setFiles((prev: any) => [...prev, ...files]);
     }
+    e.target.value = null;
   };
   function createFormData(data: any) {
     const formData = new FormData();
@@ -271,9 +264,12 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         payload['type'] = 'video_stories';
         payload['files'] = fileVideos;
       }
-      console.log("payload",payload);
+      console.log('payload', payload);
 
-      if((photoStories.length > 0 && content.length <= 0) || (videoStories.length > 0 && content.length <= 0)) {
+      if (
+        (photoStories.length > 0 && content.length <= 0) ||
+        (videoStories.length > 0 && content.length <= 0)
+      ) {
         setContentError(true);
         return;
       }
@@ -798,7 +794,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   id="imageUpload"
                   disabled={isImageDisabled}
                   onChange={handleImageChange}
-                  // ref={fileInputRef}
                 />
                 <input
                   type="file"
@@ -808,7 +803,6 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                   id="videoUpload"
                   disabled={isVideoDisabled}
                   onChange={handleVideoChange}
-                  // ref={fileInputRef}
                 />
                 <input
                   ref={storyInputRef}
