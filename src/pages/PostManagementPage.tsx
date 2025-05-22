@@ -156,21 +156,30 @@ function PostManagementPage() {
 
   const { innerBorderRef } = useOnOutsideClick(() => setShowFanpageDropdown(false));
   function getFirstImage(input: any) {
+    const videoFallback = '/vid.jpg';
+
     if (!input || input.trim() === '') {
       return defaultImage;
     }
+
     try {
       const parsed = JSON.parse(input);
-      console.log(parsed);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed[0];
+        const first = parsed[0];
+        if (typeof first === 'string' && first.includes('video')) {
+          return videoFallback;
+        }
+        return first;
       }
     } catch (e) {
-      if (typeof input === 'string' && input.startsWith('http')) {
-        return input;
+      // Nếu input là một chuỗi URL đơn giản
+      if (typeof input === 'string') {
+        if (input.includes('video')) return videoFallback;
+        if (input.startsWith('http')) return input;
       }
     }
 
+    // Trường hợp fallback
     return defaultImage;
   }
   function parseAvatarUrls(input: any): string[] {
@@ -407,7 +416,7 @@ function PostManagementPage() {
                             alt="Post image"
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
                           {(() => {
                             try {
                               const images = parseAvatarUrls(post.post_avatar_url);
