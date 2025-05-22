@@ -560,6 +560,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         </div>
 
         <div className="p-4">
+
           <div className="max-h-[70vh] overflow-auto space-y-4">
             {/* Page Selection */}
             <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
@@ -676,45 +677,45 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
               </div>
             )}
 
-            <div className="p-4">
-              {status === 'photoStories' && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {photoStories.map((img: any, index: any) => (
-                    <div key={index} className="relative w-32 h-32 image-exist">
-                      <img
-                        src={img}
-                        alt={`upload-${index}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => handleRemoveImageStory(index)}
-                        className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              {status === 'videoStories' && (
-                <div className="mt-4 flex flex-wrap gap-3 video">
-                  {videoStories.map((vid: string, index: number) => (
-                    <div key={index} className="relative w-32 h-32 video-exist">
-                      <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
-                      <button
-                        onClick={() => handleRemoveVideoStory(index)}
-                        className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {status === 'photoStories' && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {photoStories.map((img: any, index: any) => (
+                  <div key={index} className="relative w-32 h-32 image-exist">
+                    <img
+                      src={img}
+                      alt={`upload-${index}`}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => handleRemoveImageStory(index)}
+                      className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/*<ToastContainer />*/}
-            </div>
+            {status === 'videoStories' && (
+              <div className="mt-4 flex flex-wrap gap-3 video">
+                {videoStories.map((vid: string, index: number) => (
+                  <div key={index} className="relative w-32 h-32 video-exist">
+                    <video src={vid} controls className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      onClick={() => handleRemoveVideoStory(index)}
+                      className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-opacity-75"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/*<ToastContainer />*/}
+
 
             {/* AI Suggestions */}
             {!showAiSuggestions && !visible ? (
