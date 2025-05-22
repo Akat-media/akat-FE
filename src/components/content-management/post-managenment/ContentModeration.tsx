@@ -25,6 +25,7 @@ import {
 } from '../../../lib/contentModeration';
 import axios from 'axios';
 import { BaseUrl } from '../../../constants';
+import { Pagination } from 'antd';
 import { toast } from 'react-toastify';
 
 interface MonitoredPage {
@@ -77,6 +78,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
   const [volume, setVolume] = useState(90);
   const [threshold, setThreshold] = useState(90);
   const [pageSize, setPageSize] = useState(6);
+  const [totalCount, setTotalCount] = useState(0);
 
   const defaultPrompt =
     'Bạn là AI kiểm duyệt nội dung cho mạng xã hội. \n' +
@@ -233,8 +235,9 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
         moderation_result: post.moderation_result || null,
       }));
       setPosts(postsData);
-      const totalCount = response.data.data?.totalCount || 0;
-      setTotalPages(Math.ceil(totalCount / pageSize));
+      const count = response.data.data?.totalCount || 0;
+      setTotalCount(count);
+      setTotalPages(Math.ceil(count / pageSize));
     } catch (err) {
       console.error('Error fetching posts:', err);
       setPosts([]);
@@ -488,7 +491,7 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                         ) : (
                           <div
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded min-w-[120px] text-sm font-medium border ${
-                              selectedPage === page.id && autoHideEnabled
+                              page.autoModerationEnabled
                                 ? 'bg-green-100 text-green-700 border-green-300'
                                 : 'bg-gray-100 text-gray-700 border-gray-300'
                             }`}
@@ -617,21 +620,18 @@ const ContentModeration: React.FC<Props> = ({ onClose }) => {
                     <p className="text-gray-500">Chưa có bài viết nào được kiểm duyệt</p>
                   </div>
                 )}
-                <div className="mt-4 flex justify-end gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setPage(i + 1)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                        i + 1 === page
-                          ? 'bg-blue-100 text-blue-700 font-medium'
-                          : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
+                {filteredPosts.length > 0 && (
+                  <div className="mt-4 flex justify-end">
+                    <Pagination
+                      current={page}
+                      total={totalCount}
+                      pageSize={pageSize}
+                      onChange={(p) => setPage(p)}
+                      showSizeChanger={false}
+                      showQuickJumper={false}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
