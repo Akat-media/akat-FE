@@ -87,6 +87,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
   const [fileImages, setFileImages] = useState<File[]>([]);
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
+  const [contentError, setContentError] = useState(false);
 
   const handleStoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -208,6 +209,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
+    setContentError(false);
     // if (fileInputRef.current) {
     //   fileInputRef.current.value = '';
     // }
@@ -261,6 +263,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         payload['type'] = '';
       } else if (videos.length > 0) {
         payload['type'] = 'video';
+        payload['files'] = fileVideos;
       } else if (photoStories.length > 0) {
         payload['type'] = 'photo_stories';
         payload['files'] = fileImages;
@@ -268,7 +271,13 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
         payload['type'] = 'video_stories';
         payload['files'] = fileVideos;
       }
-      console.log(payload);
+      console.log("payload",payload);
+
+      if((photoStories.length > 0 && content.length <= 0) || (videoStories.length > 0 && content.length <= 0)) {
+        setContentError(true);
+        return;
+      }
+
       const body: any = createFormData(payload);
       // return;
       const res = await axios
@@ -331,6 +340,7 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
     setPhotoStories([]);
     setFileImages([]);
     setIsVideoDisabled(false);
+    setContentError(false);
 
     // if (fileInputRef.current) {
     //   fileInputRef.current.value = '';
@@ -558,6 +568,9 @@ function NewPostModal({ page, onClose, onSuccess }: NewPostModalProps) {
                 placeholder="Bạn đang nghĩ gì?"
                 className="w-full h-full min-h-[150px] bg-transparent border-none focus:ring-0 focus:outline-none resize-none text-gray-900 placeholder-gray-500 text-lg"
               />
+              {contentError && (
+                <p className="mt-2 text-bg text-red-600">Không được để trống văn bản</p>
+              )}
 
               {/*map*/}
               {selected && showMap && (
