@@ -73,7 +73,7 @@ function PostSchedule({ page }: PostScheduleProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isImageDisabled, setIsImageDisabled] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
-  const [videos, setVideos] = useState<any>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [fileVideos, setFileVideos] = useState<any[]>([]);
   const [status, setStatus] = useState('');
   const [photoStories, setPhotoStories] = useState<string[]>([]);
@@ -101,7 +101,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  console.log('dataPostDraft', dataPostDraft);
+  // console.log('dataPostDraft', dataPostDraft);
   const fetchPostsFromConnectedPages = async () => {
     try {
       setLoading(true);
@@ -556,7 +556,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideo = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setContentError(false);
@@ -565,7 +565,7 @@ function PostSchedule({ page }: PostScheduleProps) {
 
   const handleRemoveVideoStory = (index: number) => {
     setVideoStories((prev) => prev.filter((_, i) => i !== index));
-    setVideos((prev: string[]) => prev.filter((_, i) => i !== index));
+    setVideos((prev) => prev.filter((_, i) => i !== index));
     setFileVideos((prev) => prev.filter((_, i) => i !== index));
     setIsImageDisabled(false);
     setIsVideoDisabled(false);
@@ -908,8 +908,8 @@ function PostSchedule({ page }: PostScheduleProps) {
                     setSuggestions([]);
                     setAsk('');
                     setContentError(false);
-                    setImages('');
-                    setVideos('');
+                    images.length = 0;
+                    videos.length = 0;
                     setStatus('');
                     setIsImageDisabled(false);
                     setIsVideoDisabled(false);
@@ -1268,8 +1268,8 @@ function PostSchedule({ page }: PostScheduleProps) {
                   setVisible(false);
                   setHasSubmitted(false);
                   setContentError(false);
-                  setImages('');
-                  setVideos('');
+                  images.length = 0;
+                  videos.length = 0;
                   setStatus('');
                   setIsImageDisabled(false);
                   setIsVideoDisabled(false);
